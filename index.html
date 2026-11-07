@@ -432,4 +432,84 @@ $('refreshCancelledTickets').onclick=loadAdminCancelledTickets;
  logout.onclick=async()=>{const {error}=await supabaseClient.auth.signOut();if(error){setMessage('ログアウトできませんでした。');return}setMessage('ログアウトしました。');await refreshSession()};
  supabaseClient.auth.onAuthStateChange(()=>refreshSession());refreshSession();
 })();
+
+/* Realtime support chat enhancement */
+const aevSupportRealtimeChannels = new Map();
+function supportReplyThread(card,ticketId,isAdmin){
+ const open=document.createElement('button');open.className='btn';open.textContent='💬 リアルタイムチャットを開く';card.append(open);
+ const thread=document.createElement('div');thread.style.marginTop='12px';thread.hidden=true;card.append(thread);
+ let channel=null, messagesBox=null, statusBox=null, typingTimer=null, lastTypingAt=0, loaded=false, myUserId=null;
+ const cleanup=()=>{if(channel&&supabaseClient){supabaseClient.removeChannel(channel);channel=null;aevSupportRealtimeChannels.delete(String(ticketId))}};
+ const addStatus=()=>{statusBox=document.createElement('div');statusBox.className='muted';statusBox.style.margin='8px 0';statusBox.textContent='相手の状態を確認しています…';thread.append(statusBox)};
+ const refreshStatus=async()=>{
+   if(!statusBox)return;
+   const states=channel?channel.presenceState():{};
+   let peerOnline=false, peerTyping=false, peerLastSeen=null;
+   Object.values(states).flat().forEach(p=>{
+     if(p.user_id && p.user_id!==myUserId){peerOnline=true;peerTyping=peerTyping||p.typing===true;peerLastSeen=p.last_seen_at||peerLastSeen}
+   });
+   if(peerOnline){statusBox.textContent=peerTyping?'🟢 オンライン・入力中':'🟢 オンライン';return}
+   let seen=peerLastSeen;
+   try{const {data}=await supabaseClient.rpc('aevtools_support_get_presence',{p_ticket_id:ticketId});seen=data?.last_seen_at||seen}catch(e){}
+   statusBox.textContent=seen?'⚪ オフライン · 最終アクセス：'+new Date(seen).toLocaleString('ja-JP'):'⚪ オフライン · 最終アクセス：記録なし';
+ };
+ const setupRealtime=async()=>{
+   const {data:{user}}=await supabaseClient.auth.getUser();myUserId=user?.id||null;
+   if(!myUserId)return;
+   await supabaseClient.rpc('aevtools_support_touch_presence');
+   const topic='aev-support:'+ticketId;
+   channel=supabaseClient.channel(topic,{config:{private:true,presence:{key:myUserId},broadcast:{self:false}}});
+   channel.on('presence',{event:'sync'},refreshStatus);
+   channel.on('presence',{event:'join'},refreshStatus);
+   channel.on('presence',{event:'leave'},refreshStatus);
+   channel.on('broadcast',{event:'typing'},payload=>{
+     if(!statusBox)return;
+     if(payload?.payload?.user_id===myUserId)return;
+     statusBox.textContent='🟢 オンライン・入力中';
+     clearTimeout(typingTimer);typingTimer=setTimeout(refreshStatus,2500);
+   });
+   channel.on('broadcast',{event:'new_message'},async()=>{if(messagesBox)await loadThreadMessages(messagesBox,ticketId);});
+   channel.subscribe(async state=>{
+     if(state==='SUBSCRIBED'){
+       const {data}=await supabaseClient.rpc('aevtools_support_touch_presence');
+       await channel.track({user_id:myUserId,role:isAdmin?'admin':'user',typing:false,last_seen_at:data||new Date().toISOString()});
+       await refreshStatus();
+     }else if(state==='CHANNEL_ERROR'||state==='TIMED_OUT'){
+       if(statusBox)statusBox.textContent='リアルタイム接続に失敗しました。SupabaseのSQLと接続を確認してください。';
+     }
+   });
+   aevSupportRealtimeChannels.set(String(ticketId),channel);
+ };
+ open.onclick=async()=>{
+   if(!supabaseClient){toast('ログインしてください');return}
+   if(!thread.hidden){thread.hidden=true;open.textContent='💬 リアルタイムチャットを開く';cleanup();return}
+   thread.hidden=false;open.textContent='チャットを閉じる';thread.innerHTML='';
+   addStatus();
+   const loading=document.createElement('p');loading.className='muted';loading.textContent='メッセージを読み込んでいます…';thread.append(loading);
+   messagesBox=document.createElement('div');messagesBox.style.display='grid';messagesBox.style.gap='8px';thread.append(messagesBox);
+   await loadThreadMessages(messagesBox,ticketId);
+   loaded=true;
+   const form=document.createElement('div');form.style.marginTop='12px';
+   const label=document.createElement('label');label.textContent=isAdmin?'Aev0rnJPからの返信':'返信内容';
+   const input=document.createElement('textarea');input.className='field';input.rows=4;input.maxLength=4000;input.placeholder='返信を入力してください（最大4000文字）';
+   const send=document.createElement('button');send.className='btn primary';send.textContent='返信を送信';
+   const sendStatus=document.createElement('p');sendStatus.className='muted';
+   form.append(label,input,send,sendStatus);thread.append(form);
+   await setupRealtime();
+   input.addEventListener('input',()=>{
+     if(!channel||!myUserId)return;
+     const now=Date.now();if(now-lastTypingAt<450)return;lastTypingAt=now;
+     channel.send({type:'broadcast',event:'typing',payload:{user_id:myUserId,typing:!!input.value.trim()}});
+   });
+   send.onclick=async()=>{
+     const message=input.value.trim();if(!message){sendStatus.textContent='返信内容を入力してください。';return}
+     send.disabled=true;const {error}=await supabaseClient.rpc('aevtools_support_reply',{p_ticket_id:ticketId,p_message:message});send.disabled=false;
+     if(error){sendStatus.textContent=error.message==='support_blacklisted'?'このアカウントはサポートへの返信が制限されています。':'送信できませんでした。';return}
+     input.value='';await loadThreadMessages(messagesBox,ticketId);
+     if(channel)await channel.send({type:'broadcast',event:'new_message',payload:{ticket_id:ticketId}});
+     sendStatus.textContent='送信しました。';if(isAdmin)await loadAdminSupportTickets();else await loadMySupportTickets();
+   };
+ };
+}
+
 </script></body></html>
