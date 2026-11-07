@@ -102,3 +102,89 @@ revoke all on function public.aevtools_admin_list_support_tickets() from public;
 grant execute on function public.aevtools_admin_list_support_tickets() to authenticated;
 revoke all on function public.aevtools_admin_update_support_ticket(uuid,text) from public;
 grant execute on function public.aevtools_admin_update_support_ticket(uuid,text) to authenticated;
+
+
+-- Support conversation/reply system (migration; safe to run again)
+create table if not exists public.aevtools_support_replies (
+  id uuid primary key default gen_random_uuid(),
+  ticket_id uuid not null references public.aevtools_support_tickets(id) on delete cascade,
+  sender_user_id uuid not null references auth.users(id) on delete cascade,
+  message text not null check (char_length(message) between 1 and 4000),
+  created_at timestamptz not null default now()
+);
+create index if not exists aevtools_support_replies_ticket_idx
+  on public.aevtools_support_replies(ticket_id, created_at asc);
+alter table public.aevtools_support_replies enable row level security;
+revoke all on public.aevtools_support_replies from anon, authenticated;
+
+create or replace function public.aevtools_support_ticket_messages(p_ticket_id uuid)
+returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+declare v_uid uuid := auth.uid(); v_admin boolean; v_owner uuid; v_result jsonb;
+begin
+  if v_uid is null then raise exception 'login_required'; end if;
+  select user_id into v_owner from public.aevtools_support_tickets where id=p_ticket_id;
+  if v_owner is null then raise exception 'ticket_not_found'; end if;
+  select exists(select 1 from public.aevtools_admin where user_id=v_uid) into v_admin;
+  if v_uid<>v_owner and not v_admin then raise exception 'not_allowed'; end if;
+
+  select coalesce(jsonb_agg(item order by created_at asc, sort_order asc),'[]'::jsonb)
+  into v_result
+  from (
+    select jsonb_build_object(
+      'id', 'initial-'||t.id::text,
+      'sender', 'user',
+      'label', case when v_admin then 'ユーザー' else 'あなた' end,
+      'message', t.message,
+      'created_at', t.created_at
+    ) as item, t.created_at, 0 as sort_order
+    from public.aevtools_support_tickets t where t.id=p_ticket_id
+    union all
+    select jsonb_build_object(
+      'id', r.id,
+      'sender', case when exists(select 1 from public.aevtools_admin a where a.user_id=r.sender_user_id) then 'admin' else 'user' end,
+      'label', case
+        when exists(select 1 from public.aevtools_admin a where a.user_id=r.sender_user_id) then '開発者'
+        when v_admin then 'ユーザー'
+        else 'あなた'
+      end,
+      'message', r.message,
+      'created_at', r.created_at
+    ) as item, r.created_at, 1 as sort_order
+    from public.aevtools_support_replies r where r.ticket_id=p_ticket_id
+  ) q;
+  return v_result;
+end;
+$$;
+
+create or replace function public.aevtools_support_reply(p_ticket_id uuid,p_message text)
+returns uuid
+language plpgsql security definer
+set search_path = public
+as $$
+declare v_uid uuid := auth.uid(); v_owner uuid; v_reply_id uuid;
+begin
+  if v_uid is null then raise exception 'login_required'; end if;
+  if char_length(trim(coalesce(p_message,''))) not between 1 and 4000 then
+    raise exception 'invalid_reply';
+  end if;
+  select user_id into v_owner from public.aevtools_support_tickets where id=p_ticket_id;
+  if v_owner is null then raise exception 'ticket_not_found'; end if;
+  if v_uid<>v_owner and not exists(select 1 from public.aevtools_admin where user_id=v_uid) then
+    raise exception 'not_allowed';
+  end if;
+  insert into public.aevtools_support_replies(ticket_id,sender_user_id,message)
+  values(p_ticket_id,v_uid,trim(p_message)) returning id into v_reply_id;
+  update public.aevtools_support_tickets
+  set status='open',updated_at=now()
+  where id=p_ticket_id;
+  return v_reply_id;
+end;
+$$;
+
+revoke all on function public.aevtools_support_ticket_messages(uuid) from public;
+grant execute on function public.aevtools_support_ticket_messages(uuid) to authenticated;
+revoke all on function public.aevtools_support_reply(uuid,text) from public;
+grant execute on function public.aevtools_support_reply(uuid,text) to authenticated;
