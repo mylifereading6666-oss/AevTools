@@ -124,12 +124,13 @@ function showPage(name){
  try{history.replaceState(null,'','#'+name)}catch(e){}
  window.scrollTo({top:0,behavior:'smooth'});
 }
-document.addEventListener('click',e=>{
- const el=e.target.closest('[data-page]');
- if(!el)return;
- const name=el.dataset.page;
- if(!$('page-'+name))return;
- e.preventDefault();showPage(name);
+document.querySelectorAll('[data-page]').forEach(el=>{
+ const name=el.getAttribute('data-page');
+ el.addEventListener('click',function(e){
+  if(!$('page-'+name)){e.preventDefault();toast('移動先ページが見つかりません：'+name);return}
+  e.preventDefault();
+  showPage(name);
+ });
 });
 $('hamb').onclick=()=>{$('sidebar').classList.toggle('open');$('overlay').classList.toggle('show')};$('overlay').onclick=()=>{$('sidebar').classList.remove('open');$('overlay').classList.remove('show')};
 // YouTube channel link is fixed to Aev0rnJP and cannot be edited from the page.
