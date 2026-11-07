@@ -409,7 +409,7 @@ async function loadAdminDirectChats(openId){
  if(!data?.length){list.textContent='個別チャットはまだありません。';return}
  data.forEach(ch=>{
   const card=document.createElement('div');card.className='memoitem';
-  const h=document.createElement('h4');h.textContent=(ch.user_email||'ユーザー')+' · '+(ch.is_online?'🟢オンライン':'⚪オフライン');
+  const h=document.createElement('h4');h.textContent=(ch.user_email||'ユーザー')+' · '+(ch.is_online?'🟢オンライン':'⚪オフライン')+' · '+(ch.status==='closed'?'🔒終了済み':'🟢受付中');
   const p=document.createElement('p');p.textContent='最終アクセス：'+(ch.last_seen_at?new Date(ch.last_seen_at).toLocaleString('ja-JP'):'記録なし');
   const b=document.createElement('button');b.className='btn';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,ch.user_email||'ユーザー');
   card.append(h,p,b);list.append(card);
@@ -427,8 +427,8 @@ async function renderDirectChat(card,chatId,peerName){
  box._channel=channel;
  channel.on('broadcast',{event:'new_message'},refresh);
  channel.subscribe(state=>{if(state==='CHANNEL_ERROR'||state==='TIMED_OUT')status.textContent='リアルタイム接続に失敗しました。SQL設定を確認してください。'});
- const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.placeholder='メッセージを入力（最大4000文字）';
- const send=document.createElement('button');send.className='btn primary';send.textContent='送信';
+ const chatMeta=(await supabaseClient.rpc('aevtools_list_direct_chats')).data||[];const chatInfo=chatMeta.find(x=>x.id===chatId);const closed=chatInfo?.status==='closed';if(closed){status.textContent+=' · 🔒このチャットは管理者により終了されています';}const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.disabled=closed;input.placeholder=closed?'終了済みのため送信できません':'メッセージを入力（最大4000文字）';
+ const send=document.createElement('button');send.className='btn primary';send.textContent=closed?'チャット終了済み':'送信';send.disabled=closed;
  send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.rpc('aevtools_send_direct_chat_message',{p_chat_id:chatId,p_message:message});send.disabled=false;if(error){toast('送信できませんでした：'+error.message);return}input.value='';await refresh();await channel.send({type:'broadcast',event:'new_message',payload:{chat_id:chatId}})};
  box.append(input,send);
 }
