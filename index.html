@@ -92,7 +92,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <div class="panel" id="accountPanel"><div id="accountStatus" class="muted">ログイン状態を確認しています…</div>
 <div id="accountForms"><div class="row"><button class="btn primary" id="showSignup">新規登録</button><button class="btn" id="showLogin">ログイン</button></div>
 <div id="signupForm"><h3>新規アカウント登録</h3><label for="signupEmail">メールアドレス</label><input class="field" id="signupEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="signupPassword">パスワード（8文字以上）</label><input class="field" id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="パスワード"><button class="btn primary" id="signupSubmit">確認メールを送信して登録</button></div>
-<div id="loginForm" hidden><h3>ログイン</h3><label for="loginEmail">メールアドレス</label><input class="field" id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="loginPassword">パスワード</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード"><div class="row"><button class="btn primary" id="loginSubmit">ログイン</button><button class="btn" id="resetPassword">パスワードを再設定</button></div></div>
+<div id="loginForm" hidden><h3>ログイン</h3><p class="muted">ログイン状態はこの端末のブラウザーに保存され、次回アクセス時も維持されます。共有端末では使用後にログアウトしてください。</p><label for="loginEmail">メールアドレス</label><input class="field" id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="loginPassword">パスワード</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード"><div class="row"><button class="btn primary" id="loginSubmit">ログイン</button><button class="btn" id="resetPassword">パスワードを再設定</button></div></div>
 <button class="btn" id="logoutButton" hidden>ログアウト</button><p id="accountMessage" class="muted" aria-live="polite"></p></div></div>
 <div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
 <div class="row"><button class="btn primary" id="runDiagnostics">ブラウザー診断を実行</button><button class="btn" id="downloadDebugReport">診断レポートを保存</button><button class="btn" id="refreshAdminTickets">サポート一覧を更新</button></div>
@@ -288,7 +288,7 @@ $('refreshAdminTickets').onclick=loadAdminSupportTickets;
    setMessage('SupabaseのProject URLとPublishable keyが設定されると、登録・ログインを利用できます。');
    return;
  }
- supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+ supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
  async function refreshAdminStatus(){
   const claimStatus=$('adminClaimStatus'),claimForm=$('adminClaimForm');
   if(!supabaseClient){claimStatus.textContent='認証サービスに接続できません。';claimForm.hidden=true;return}
