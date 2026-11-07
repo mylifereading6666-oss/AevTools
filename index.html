@@ -143,7 +143,8 @@ function showImportWarning(label,section){
 $('jsonImportCancel').onclick=()=>{ $('jsonImportWarning').classList.remove('show');if(jsonImportWarningResolve){jsonImportWarningResolve(false);jsonImportWarningResolve=null}};
 $('jsonImportContinue').onclick=()=>{ $('jsonImportWarning').classList.remove('show');if(jsonImportWarningResolve){jsonImportWarningResolve(true);jsonImportWarningResolve=null}};
 $('jsonImportWarning').onclick=e=>{if(e.target===$('jsonImportWarning'))$('jsonImportCancel').click()};
-\n// Per-section JSON backup/restore. Imported data is validated and only the selected section is replaced.
+
+// Per-section JSON backup/restore. Imported data is validated and only the selected section is replaced.
 const jsonBackupConfig={
  task:{keys:['tasks'],filename:'AevTask-backup.json',validate:d=>Array.isArray(d.tasks)&&d.tasks.every(x=>x&&typeof x.name==='string'&&typeof x.done==='boolean')},
  focus:{keys:['studies'],filename:'AevFocus-backup.json',extra:()=>({focusgoal:$('focusgoal').value,focusmins:$('focusmins').value,breakmins:$('breakmins').value,timerSound:$('timerSound').checked,timerPopup:$('timerPopup').checked}),validate:d=>Array.isArray(d.studies)&&d.studies.every(x=>x&&typeof x.name==='string'&&Number.isFinite(+x.minutes)&&typeof x.date==='string')},
