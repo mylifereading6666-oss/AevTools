@@ -115,8 +115,22 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_BnrPnMn5fCDrXuloVe7XYw_W5R7JH4E
 let supabaseClient=null;
 const $=id=>document.getElementById(id), read=(key,def=[])=>{try{return JSON.parse(localStorage.getItem('aev_'+key))??def}catch{return def}}, save=(key,val)=>localStorage.setItem('aev_'+key,JSON.stringify(val)), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window.toastT);window.toastT=setTimeout(()=>$('toast').style.display='none',2300)}
-function showPage(name){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));$('sidebar').classList.remove('open');$('overlay').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'})}
-document.querySelectorAll('[data-page]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();showPage(el.dataset.page)}));
+function showPage(name){
+ const target=$('page-'+name);
+ if(!target){toast('ページが見つかりません：'+name);return}
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p===target));
+ document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+ $('sidebar').classList.remove('open');$('overlay').classList.remove('show');
+ try{history.replaceState(null,'','#'+name)}catch(e){}
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+document.addEventListener('click',e=>{
+ const el=e.target.closest('[data-page]');
+ if(!el)return;
+ const name=el.dataset.page;
+ if(!$('page-'+name))return;
+ e.preventDefault();showPage(name);
+});
 $('hamb').onclick=()=>{$('sidebar').classList.toggle('open');$('overlay').classList.toggle('show')};$('overlay').onclick=()=>{$('sidebar').classList.remove('open');$('overlay').classList.remove('show')};
 // YouTube channel link is fixed to Aev0rnJP and cannot be edited from the page.
 // Local report builder; mailto opens the configured email app.
