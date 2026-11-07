@@ -422,7 +422,7 @@ async function renderDirectChat(card,chatId,peerName){
  const box=document.createElement('div');box.className='direct-chat';box.style.marginTop='12px';card.append(box);
  const status=document.createElement('p');status.className='muted';status.textContent='個別チャット · '+peerName+' · リアルタイム接続中';box.append(status);
  const messages=document.createElement('div');box.append(messages);
- async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'管理者':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\n'+m.message;messages.append(p)})}
+ async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'Aev0rnJP（管理者）':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\n'+m.message;messages.append(p)})}
  await refresh();
  let channel=null,retryTimer=null,retryCount=0,disposed=false;
  const connectDirectRealtime=async()=>{
