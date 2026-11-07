@@ -344,3 +344,33 @@ revoke all on function public.aevtools_admin_list_cancelled_support_tickets() fr
 grant execute on function public.aevtools_admin_list_cancelled_support_tickets() to authenticated;
 revoke all on function public.aevtools_admin_set_support_blacklist(uuid,boolean,text) from public;
 grant execute on function public.aevtools_admin_set_support_blacklist(uuid,boolean,text) to authenticated;
+
+
+-- Also prevent blacklisted users from replying to support threads.
+create or replace function public.aevtools_support_reply(p_ticket_id uuid,p_message text)
+returns uuid
+language plpgsql security definer
+set search_path = public
+as $$
+declare v_uid uuid := auth.uid(); v_owner uuid; v_reply_id uuid;
+begin
+  if v_uid is null then raise exception 'login_required'; end if;
+  if char_length(trim(coalesce(p_message,''))) not between 1 and 4000 then
+    raise exception 'invalid_reply';
+  end if;
+  select user_id into v_owner from public.aevtools_support_tickets where id=p_ticket_id;
+  if v_owner is null then raise exception 'ticket_not_found'; end if;
+  if v_uid<>v_owner and not exists(select 1 from public.aevtools_admin where user_id=v_uid) then
+    raise exception 'not_allowed';
+  end if;
+  if v_uid=v_owner and exists(select 1 from public.aevtools_support_blacklist where user_id=v_uid) then
+    raise exception 'support_blacklisted';
+  end if;
+  insert into public.aevtools_support_replies(ticket_id,sender_user_id,message)
+  values(p_ticket_id,v_uid,trim(p_message)) returning id into v_reply_id;
+  update public.aevtools_support_tickets
+  set status='open',updated_at=now()
+  where id=p_ticket_id;
+  return v_reply_id;
+end;
+$$;
