@@ -7,10 +7,11 @@ AevTools is a responsive, browser-based Japanese productivity toolkit that bring
 - **AevFocus** — Pomodoro timer, study-time logs, and daily goals
 - **AevMoney** — allowance income/expense tracking, category labels, and monthly budget
 - **AevMemo** — notes, tags, search, and favorites
+- **Email reports** — automatically summarize saved task, study, money, and memo data, then open the configured email app with the subject and body prefilled
 
 ## Use the site
 
-Open the deployed site and use the ☰ menu to switch between sections. The home page includes tool introductions, a getting-started guide, and a field for your YouTube channel URL.
+Open the deployed site and use the ☰ menu to switch between sections. The home page includes tool introductions and a getting-started guide. The YouTube channel link is fixed to Aev0rnJP.
 
 ## Run locally
 
@@ -27,7 +28,9 @@ This repository includes a GitHub Actions workflow at `.github/workflows/pages.y
 
 ## Data and privacy
 
-Task, study, money, memo, and YouTube URL settings are stored in the browser's local storage. They are not synchronized between devices or browsers. Clearing browser data may remove them. Do not store sensitive information.
+Task, study, money, memo, and settings are stored in the browser's local storage. They are not synchronized between devices or browsers. Clearing browser data may remove them. Do not store sensitive information.
+
+Email reports are generated in the browser from saved data. The site uses a `mailto:` link to open your configured email app; you review and send the message yourself. No email is sent automatically by the website. Email-app support and maximum message length vary by device. Avoid emailing sensitive data.
 
 QR generation loads an external QR service, and the YouTube link opens the URL you enter. Avoid entering private data into QR content.
 
