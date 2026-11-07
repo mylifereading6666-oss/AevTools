@@ -146,7 +146,7 @@ begin
       'id', r.id,
       'sender', case when exists(select 1 from public.aevtools_admin a where a.user_id=r.sender_user_id) then 'admin' else 'user' end,
       'label', case
-        when exists(select 1 from public.aevtools_admin a where a.user_id=r.sender_user_id) then '開発者'
+        when exists(select 1 from public.aevtools_admin a where a.user_id=r.sender_user_id) then 'Aev0rnJP'
         when v_admin then 'ユーザー'
         else 'あなた'
       end,
