@@ -146,3 +146,28 @@ revoke all on function public.aevtools_send_direct_chat_message(uuid,text) from 
 grant execute on function public.aevtools_send_direct_chat_message(uuid,text) to authenticated;
 
 -- User presence heartbeat: call this after login and periodically while the page is open.
+
+-- Private Realtime channel authorization for each direct chat.
+drop policy if exists "AevTools direct chat participants can read realtime messages" on realtime.messages;
+create policy "AevTools direct chat participants can read realtime messages"
+on realtime.messages for select to authenticated
+using (
+  realtime.topic() like 'aev-direct:%'
+  and exists (
+    select 1 from public.aevtools_admin_direct_chats c
+    where c.id::text = split_part(realtime.topic(), ':', 2)
+      and (c.user_id=auth.uid() or exists(select 1 from public.aevtools_admin a where a.user_id=auth.uid()))
+  )
+);
+
+drop policy if exists "AevTools direct chat participants can send realtime messages" on realtime.messages;
+create policy "AevTools direct chat participants can send realtime messages"
+on realtime.messages for insert to authenticated
+with check (
+  realtime.topic() like 'aev-direct:%'
+  and exists (
+    select 1 from public.aevtools_admin_direct_chats c
+    where c.id::text = split_part(realtime.topic(), ':', 2)
+      and (c.user_id=auth.uid() or exists(select 1 from public.aevtools_admin a where a.user_id=auth.uid()))
+  )
+);
