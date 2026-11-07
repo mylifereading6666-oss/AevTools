@@ -32,7 +32,7 @@ returns jsonb
 language plpgsql stable security definer
 set search_path = public
 as $$
-declare v_uid uuid := auth.uid(); v_owner uuid; v_result jsonb;
+declare v_uid uuid := auth.uid(); v_owner uuid; v_peer uuid; v_result jsonb;
 begin
   if v_uid is null then raise exception 'login_required'; end if;
   select user_id into v_owner from public.aevtools_support_tickets where id=p_ticket_id;
