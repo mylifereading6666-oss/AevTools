@@ -48,6 +48,17 @@
 <div class="sectionhead"><div><h2>タスクリスト</h2><p id="taskcount">0件</p></div><button class="btn" id="cleardone">完了済みを削除</button></div><div class="panel" id="tasklist"><div class="empty">タスクはまだありません。</div></div></section>
 
 <section class="page" id="page-tools"><div class="sectionhead"><div><h2>🧰 AevTools｜便利ツール集</h2><p>ちょっとした作業に使えるツールをまとめました。</p></div></div>
+<div class="panel" style="margin-bottom:16px">
+<h3>✉ メール機能の使い方</h3>
+<p class="muted">AevToolsに保存されている記録を自動で読み込み、項目ごとに集計してメール本文を作成します。各ツールの「メール」ボタンから利用できます。</p>
+<div class="featurelist">
+<div class="feature"><strong>① 記録を自動集計</strong><span>タスク・勉強時間・収支・メモなど、選んだツールの保存データを整理します。</span></div>
+<div class="feature"><strong>② メール本文を作成</strong><span>件名と本文に、集計結果や記録一覧を自動で入力します。</span></div>
+<div class="feature"><strong>③ メールアプリで送信</strong><span>端末のメールアプリを開きます。内容と宛先を確認し、最後に自分で送信してください。</span></div>
+</div>
+<p><strong>静的ウェブの仕組み：</strong>この機能はブラウザー内でデータを集計し、mailtoリンクでメールアプリを起動します。AevToolsのサイトからメールが自動送信されるわけではなく、メールサーバーも使用しません。</p>
+<p><strong>注意：</strong>メールアプリが設定されていない場合は起動できないことがあります。メール本文が長いと、アプリや端末によっては一部が入力されない場合があります。送信前に内容を確認し、パスワードなどの機密情報はメールに含めないでください。</p>
+</div>
 <div class="grid">
 <div class="panel"><h3>文字数カウント</h3><textarea class="field" id="counttext" rows="5" placeholder="文字数を数えたい文章を入力"></textarea><div class="statgrid"><div class="stat"><small>文字数</small><strong id="chars">0</strong></div><div class="stat"><small>空白除く</small><strong id="nochars">0</strong></div><div class="stat"><small>行数</small><strong id="lines">0</strong></div></div></div>
 <div class="panel"><h3>QRコード生成</h3><p class="muted">URLや文字を入力してQRコードを作成。</p><input class="field" id="qrtext" placeholder="https://example.com"><button class="btn primary" id="makeqr">QRコードを生成</button><div id="qrresult" style="text-align:center;margin-top:12px"></div><small class="muted">QR表示には外部ライブラリ（CDN）を使用します。ネット接続が必要です。</small></div>
