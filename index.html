@@ -30,7 +30,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <button class="navbtn" data-page="focus"><span class="navicon">◷</span>AevFocus</button>
 <button class="navbtn" data-page="money"><span class="navicon">￥</span>AevMoney</button>
 <button class="navbtn" data-page="memo"><span class="navicon">▤</span>AevMemo</button>
-<button class="navbtn" data-page="account"><span class="navicon">♙</span>アカウント</button><button class="navbtn" data-page="support"><span class="navicon">✉</span>サポート</button><button class="navbtn" id="adminResolvedNav" data-page="admin-resolved" hidden><span class="navicon">✅</span>解決済みリクエスト</button><button class="navbtn" id="adminCancelledNav" data-page="admin-cancelled" hidden><span class="navicon">🗂</span>キャンセル済みリクエスト</button><button class="navbtn" id="adminBlacklistNav" data-page="admin-blacklist" hidden><span class="navicon">🚫</span>ブラックリスト管理</button>
+<button class="navbtn" data-page="account"><span class="navicon">♙</span>アカウント</button><button class="navbtn" data-page="support"><span class="navicon">✉</span>サポート</button><button class="navbtn" id="adminResolvedNav" data-page="admin-resolved" hidden><span class="navicon">✅</span>解決済みリクエスト</button><button class="navbtn" id="adminCancelledNav" data-page="admin-cancelled" hidden><span class="navicon">🗂</span>キャンセル済みリクエスト</button><button class="navbtn" id="adminUsersNav" data-page="admin-users" hidden><span class="navicon">👥</span>ユーザー管理・個別チャット</button><button class="navbtn" id="adminBlacklistNav" data-page="admin-blacklist" hidden><span class="navicon">🚫</span>ブラックリスト管理</button>
 <div class="navlabel">INFORMATION</div><button class="navbtn" data-page="about"><span class="navicon">ⓘ</span>使い方・サイト情報</button>
 </aside>
 <main class="main">
@@ -114,7 +114,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <label for="supportMessage">内容</label><textarea class="field" id="supportMessage" rows="6" maxlength="4000" placeholder="発生した状況、操作、表示されたエラーなど（最大4000文字）"></textarea>
 <button class="btn primary" id="supportSubmit">サポートリクエストを送信</button><p id="supportStatus" class="muted" aria-live="polite"></p></div>
 <div class="panel"><h3>送信したリクエスト・返信</h3><button class="btn" id="supportRefresh">自分のリクエストを更新</button><div id="mySupportList" class="muted">ログイン後に確認できます。</div></div></section>
-<section class="page" id="page-admin-blacklist"><div class="sectionhead"><div><h2>🚫 ブラックリスト登録ユーザー</h2><p>管理者専用。登録ユーザー情報とサポート履歴を確認できます。</p></div><button class="btn" id="refreshBlacklistUsers">一覧を更新</button></div><div id="blacklistUsersList" class="muted">管理者としてログインすると表示されます。</div></section>
+<section class="page" id="page-admin-users"><div class="sectionhead"><div><h2>👥 管理者ユーザー管理・個別チャット</h2><p>管理者専用。登録ユーザーの状態を確認し、管理者から個別チャットを開始できます。</p></div><button class="btn" id="refreshAdminUsers">ユーザー一覧を更新</button></div><div class="panel"><label for="adminUserSearch">ユーザー検索（メール・ID）</label><input class="field" id="adminUserSearch" placeholder="メールアドレスやユーザーIDで検索"><div id="adminUsersList" class="muted">管理者としてログインすると表示されます。</div></div><div class="panel" style="margin-top:16px"><h3>個別チャット</h3><p class="muted">管理者が開始したチャットのみ、対象ユーザーに表示されます。</p><div id="adminDirectChatsList"></div></div></section><section class="page" id="page-admin-blacklist"><div class="sectionhead"><div><h2>🚫 ブラックリスト登録ユーザー</h2><p>管理者専用。登録ユーザー情報とサポート履歴を確認できます。</p></div><button class="btn" id="refreshBlacklistUsers">一覧を更新</button></div><div id="blacklistUsersList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-resolved"><div class="sectionhead"><div><h2>✅ 解決済みサポートリクエスト</h2><p>管理者専用ページ。解決済みのリクエストを確認・受付中に戻せます。</p></div><button class="btn" id="refreshResolvedTickets">一覧を更新</button></div><div id="resolvedSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-cancelled"><div class="sectionhead"><div><h2>🗂 キャンセル済みサポートリクエスト</h2><p>管理者専用ページ。キャンセル理由と内容を確認できます。</p></div><button class="btn" id="refreshCancelledTickets">一覧を更新</button></div><div id="cancelledSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-about"><div class="sectionhead"><div><h2>使い方・サイト情報</h2><p>AevToolsを安心して使うためのガイド。</p></div></div><div class="panel"><h3>基本的な使い方</h3><ol><li>左上の三本線（☰）を押してメニューを開きます。</li><li>使いたいツールを選択します。</li><li>タスク・メモ・記録などを入力し、各ツールの保存ボタンを押します。</li><li>ホームから各ツールへすぐに移動できます。</li></ol><h3>データ保存について</h3><p>タスク、学習記録、お小遣い記録、メモ、設定はブラウザのローカルストレージに保存されます。基本的に同じ端末・同じブラウザで利用してください。ブラウザのデータ削除やプライベートブラウズでは保存内容が消える場合があります。重要な情報は別途バックアップしてください。</p><h3>プライバシー</h3><p>このサイトは静的ウェブサイトで、入力したタスクやメモなどを独自サーバーへ送信しません。ただしQRコード生成は外部CDNのライブラリを読み込む場合があります。個人情報や秘密情報を入力しないようにしてください。</p><h3>対応環境</h3><p>スマートフォン、タブレット、パソコンの最新ブラウザを推奨します。画像変換やタイマーなど一部機能はブラウザの機能に依存します。</p><h3>ライセンス</h3><p>このプロジェクトのソースコードはMIT Licenseを想定しています。外部ライブラリは各ライセンスに従います。</p><h3>GitHub</h3><p><a class="btn" href="https://github.com/mylifereading6666-oss/AevTools" target="_blank" rel="noopener">AevTools リポジトリを開く ↗</a></p></div></section>
@@ -362,7 +362,59 @@ async function loadAdminCancelledTickets(){if(!supabaseClient)return;const {data
 $('refreshCancelledTickets').onclick=loadAdminCancelledTickets;
 
 
-// Supabase connection is configured for all visitors in the site code.
+
+// Admin user directory and admin-created private chats
+let adminUsersCache=[];
+async function loadAdminUsers(){
+ if(!supabaseClient)return;
+ const {data,error}=await supabaseClient.rpc('aevtools_admin_list_users');
+ const list=$('adminUsersList');if(!list)return;list.innerHTML='';
+ if(error){list.textContent='管理者権限またはユーザー管理SQLを確認してください。';return}
+ adminUsersCache=data||[];renderAdminUsers();
+}
+function renderAdminUsers(){
+ const list=$('adminUsersList');if(!list)return;list.innerHTML='';
+ const q=($('adminUserSearch')?.value||'').toLowerCase();
+ const rows=adminUsersCache.filter(u=>((u.email||'')+' '+u.user_id).toLowerCase().includes(q));
+ if(!rows.length){list.textContent='該当するユーザーはいません。';return}
+ rows.forEach(u=>{
+  const card=document.createElement('div');card.className='memoitem';
+  const h=document.createElement('h4');h.textContent=(u.is_online?'🟢 オンライン':'⚪ オフライン')+' · '+(u.email||'メール非公開');
+  const p=document.createElement('p');p.textContent='ユーザーID：'+u.user_id+'\n登録日時：'+(u.created_at?new Date(u.created_at).toLocaleString('ja-JP'):'不明')+'\n最終アクセス：'+(u.last_seen_at?new Date(u.last_seen_at).toLocaleString('ja-JP'):'記録なし')+'\n最終ログイン：'+(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString('ja-JP'):'記録なし');
+  const b=document.createElement('button');b.className='btn primary';b.textContent='このユーザーとの個別チャットを作成／開く';
+  b.onclick=async()=>{b.disabled=true;const {data,error}=await supabaseClient.rpc('aevtools_admin_create_direct_chat',{p_user_id:u.user_id});b.disabled=false;if(error){toast('個別チャットを作成できませんでした：'+error.message);return}await loadAdminDirectChats(String(data));};
+  card.append(h,p,b);list.append(card);
+ });
+}
+async function loadAdminDirectChats(openId){
+ const list=$('adminDirectChatsList');if(!list||!supabaseClient)return;list.innerHTML='';
+ const {data,error}=await supabaseClient.rpc('aevtools_list_direct_chats');
+ if(error){list.textContent='個別チャット一覧を取得できませんでした。';return}
+ if(!data?.length){list.textContent='個別チャットはまだありません。';return}
+ data.forEach(ch=>{
+  const card=document.createElement('div');card.className='memoitem';
+  const h=document.createElement('h4');h.textContent=(ch.user_email||'ユーザー')+' · '+(ch.is_online?'🟢オンライン':'⚪オフライン');
+  const p=document.createElement('p');p.textContent='最終アクセス：'+(ch.last_seen_at?new Date(ch.last_seen_at).toLocaleString('ja-JP'):'記録なし');
+  const b=document.createElement('button');b.className='btn';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,ch.user_email||'ユーザー');
+  card.append(h,p,b);list.append(card);
+  if(openId===ch.id)renderDirectChat(card,ch.id,ch.user_email||'ユーザー');
+ });
+}
+async function renderDirectChat(card,chatId,peerName){
+ let old=card.querySelector('.direct-chat');if(old){old.remove();return}
+ const box=document.createElement('div');box.className='direct-chat';box.style.marginTop='12px';card.append(box);
+ const status=document.createElement('p');status.className='muted';status.textContent='個別チャット · '+peerName;box.append(status);
+ const messages=document.createElement('div');box.append(messages);
+ async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'管理者':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\n'+m.message;messages.append(p)})}
+ await refresh();
+ const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.placeholder='メッセージを入力（最大4000文字）';
+ const send=document.createElement('button');send.className='btn primary';send.textContent='送信';
+ send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.rpc('aevtools_send_direct_chat_message',{p_chat_id:chatId,p_message:message});send.disabled=false;if(error){toast('送信できませんでした：'+error.message);return}input.value='';await refresh()};
+ box.append(input,send);
+}
+$('refreshAdminUsers')?.addEventListener('click',async()=>{await loadAdminUsers();await loadAdminDirectChats()});
+$('adminUserSearch')?.addEventListener('input',renderAdminUsers);
+\n// Supabase connection is configured for all visitors in the site code.
 // AevTools email/password account authentication (Supabase Auth)
 (function initAevAccount(){
  const status=$('accountStatus'),msg=$('accountMessage'),signup=$('signupForm'),login=$('loginForm'),logout=$('logoutButton');
@@ -383,7 +435,7 @@ $('refreshCancelledTickets').onclick=loadAdminCancelledTickets;
   try{
    const {data,error}=await supabaseClient.rpc('aevtools_is_admin');
    if(error)throw error;
-   if(data===true){claimStatus.textContent='👑 このアカウントは永久管理者です。';claimForm.hidden=true;$('adminToolsPanel').hidden=false;$('adminCancelledNav').hidden=false;$('adminResolvedNav').hidden=false;$('adminBlacklistNav').hidden=false;loadAdminSupportTickets();loadAdminResolvedTickets();loadAdminCancelledTickets();loadAdminBlacklistUsers()}
+   if(data===true){claimStatus.textContent='👑 このアカウントは永久管理者です。';claimForm.hidden=true;$('adminToolsPanel').hidden=false;$('adminCancelledNav').hidden=false;$('adminResolvedNav').hidden=false;$('adminBlacklistNav').hidden=false;$('adminUsersNav').hidden=false;loadAdminUsers();loadAdminDirectChats();loadAdminSupportTickets();loadAdminResolvedTickets();loadAdminCancelledTickets();loadAdminBlacklistUsers()}
    else{claimStatus.textContent='このアカウントは管理者ではありません。管理者登録が未完了の場合のみ、登録コードを入力できます。';claimForm.hidden=false;$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true}
   }catch(e){claimStatus.textContent='管理者状態を確認できません。Supabaseの管理者SQL設定が必要です。';claimForm.hidden=true}
  }
@@ -405,7 +457,7 @@ $('refreshCancelledTickets').onclick=loadAdminCancelledTickets;
   const {data:{session},error}=await supabaseClient.auth.getSession();
   if(error){status.textContent='ログイン状態を取得できませんでした。';return}
   if(session){status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
-  else{status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
+  else{status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
  }
  $('signupSubmit').onclick=async()=>{
   const email=$('signupEmail').value.trim(),password=$('signupPassword').value;
