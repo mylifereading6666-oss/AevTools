@@ -283,8 +283,8 @@ syncSecretMode();
  async function refreshSession(){
   const {data:{session},error}=await supabaseClient.auth.getSession();
   if(error){status.textContent='ログイン状態を取得できませんでした。';return}
-  if(session){status.textContent='ログイン中：'+(session.user.email||'アカウント');signup.hidden=true;login.hidden=true;logout.hidden=false}
-  else{status.textContent='ログインしていません';logout.hidden=true;showForm('signup')}
+  if(session){status.textContent='ログイン中：'+(session.user.email||'アカウント');signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true}
+  else{status.textContent='ログインしていません';logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup')}
  }
  $('signupSubmit').onclick=async()=>{
   const email=$('signupEmail').value.trim(),password=$('signupPassword').value;
