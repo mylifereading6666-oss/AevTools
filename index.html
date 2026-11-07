@@ -393,7 +393,9 @@ async function loadAdminDirectChats(openId){
   const h=document.createElement('h4');h.textContent=(ch.user_email||'ユーザー')+' · '+(ch.is_online?'🟢オンライン':'⚪オフライン')+' · '+(ch.status==='closed'?'🔒終了済み':'🟢受付中');
   const p=document.createElement('p');p.textContent='最終アクセス：'+(ch.last_seen_at?new Date(ch.last_seen_at).toLocaleString('ja-JP'):'記録なし');
   const b=document.createElement('button');b.className='btn';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,ch.user_email||'ユーザー');
-  card.append(h,p,b);list.append(card);
+  const toggle=document.createElement('button');toggle.className='btn '+(ch.status==='closed'?'primary':'');toggle.style.marginLeft='8px';toggle.textContent=ch.status==='closed'?'🔓 チャットを再開':'🔒 チャットを閉じる';
+  toggle.onclick=async()=>{toggle.disabled=true;const rpc=ch.status==='closed'?'aevtools_admin_reopen_direct_chat':'aevtools_admin_close_direct_chat';const {error}=await supabaseClient.rpc(rpc,{p_chat_id:ch.id});toggle.disabled=false;if(error){toast('チャット状態を変更できませんでした：'+error.message);return}toast(ch.status==='closed'?'個別チャットを再開しました。':'個別チャットを閉じました。');await loadAdminDirectChats();};
+  card.append(h,p,b,toggle);list.append(card);
   if(openId===ch.id)renderDirectChat(card,ch.id,ch.user_email||'ユーザー');
  });
 }
@@ -402,7 +404,7 @@ async function renderDirectChat(card,chatId,peerName){
  const box=document.createElement('div');box.className='direct-chat';box.style.marginTop='12px';card.append(box);
  const status=document.createElement('p');status.className='muted';status.textContent='個別チャット · '+peerName+' · リアルタイム接続中';box.append(status);
  const messages=document.createElement('div');box.append(messages);
- async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'Aev0rnJP（管理者）':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\n'+m.message;messages.append(p)})}
+ async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'Aev0rnJP（管理者）':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\\n'+m.message;messages.append(p)})}
  await refresh();
  let channel=null,retryTimer=null,retryCount=0,disposed=false;
  const connectDirectRealtime=async()=>{
@@ -425,7 +427,15 @@ async function renderDirectChat(card,chatId,peerName){
  box._cleanup=()=>{disposed=true;if(retryTimer)clearTimeout(retryTimer);if(channel)supabaseClient.removeChannel(channel);channel=null;aevRealtimeReconnectors.delete(connectDirectRealtime)};
  aevRealtimeReconnectors.add(connectDirectRealtime);
  await connectDirectRealtime();
- const chatMeta=(await supabaseClient.rpc('aevtools_list_direct_chats')).data||[];const chatInfo=chatMeta.find(x=>x.id===chatId);const closed=chatInfo?.status==='closed';if(closed){status.textContent+=' · 🔒このチャットは管理者により終了されています';}const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.disabled=closed;input.placeholder=closed?'終了済みのため送信できません':'メッセージを入力（最大4000文字）';
+ const chatMeta=(await supabaseClient.rpc('aevtools_list_direct_chats')).data||[];const chatInfo=chatMeta.find(x=>x.id===chatId);let closed=chatInfo?.status==='closed';
+ if(closed){status.textContent+=' · 🔒このチャットは管理者により終了されています';}
+ const {data:adminFlag}=await supabaseClient.rpc('aevtools_is_admin');const isAdmin=adminFlag===true;
+ if(isAdmin){
+  const closeBtn=document.createElement('button');closeBtn.className='btn';closeBtn.style.marginBottom='10px';closeBtn.textContent=closed?'🔓 このチャットを再開':'🔒 このチャットを閉じる';
+  closeBtn.onclick=async()=>{closeBtn.disabled=true;const rpc=closed?'aevtools_admin_reopen_direct_chat':'aevtools_admin_close_direct_chat';const {error}=await supabaseClient.rpc(rpc,{p_chat_id:chatId});closeBtn.disabled=false;if(error){toast('チャット状態を変更できませんでした：'+error.message);return}toast(closed?'個別チャットを再開しました。':'個別チャットを閉じました。');await loadAdminDirectChats(chatId);};
+  box.append(closeBtn);
+ }
+ const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.disabled=closed;input.placeholder=closed?'終了済みのため送信できません':'メッセージを入力（最大4000文字）';
  const send=document.createElement('button');send.className='btn primary';send.textContent=closed?'チャット終了済み':'送信';send.disabled=closed;
  send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.rpc('aevtools_send_direct_chat_message',{p_chat_id:chatId,p_message:message});send.disabled=false;if(error){toast('送信できませんでした：'+error.message);return}input.value='';await refresh();await channel.send({type:'broadcast',event:'new_message',payload:{chat_id:chatId}})};
  box.append(input,send);
