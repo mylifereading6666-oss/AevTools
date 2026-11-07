@@ -374,3 +374,67 @@ begin
   return v_reply_id;
 end;
 $$;
+
+
+-- Admin-only detailed blacklist user directory.
+-- Shows account email/timestamps and all support ticket/reply history.
+-- Never exposes passwords, auth tokens, or recovery secrets.
+create or replace function public.aevtools_admin_list_support_blacklist_users()
+returns jsonb
+language plpgsql stable security definer
+set search_path = public, auth
+as $$
+declare v_result jsonb;
+begin
+  if auth.uid() is null or not exists(
+    select 1 from public.aevtools_admin where user_id=auth.uid()
+  ) then
+    raise exception 'admin_required';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'user_id', b.user_id,
+    'email', u.email,
+    'account_created_at', u.created_at,
+    'last_sign_in_at', u.last_sign_in_at,
+    'blacklisted_at', b.created_at,
+    'blacklist_reason', b.reason,
+    'admin_user_id', b.admin_user_id,
+    'admin_email', admin_user.email,
+    'tickets', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', t.id,
+        'category', t.category,
+        'subject', t.subject,
+        'message', t.message,
+        'status', t.status,
+        'created_at', t.created_at,
+        'updated_at', t.updated_at,
+        'cancellation_reason', t.cancellation_reason,
+        'replies', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'sender_user_id', r.sender_user_id,
+            'sender_email', sender.email,
+            'message', r.message,
+            'created_at', r.created_at
+          ) order by r.created_at asc)
+          from public.aevtools_support_replies r
+          left join auth.users sender on sender.id=r.sender_user_id
+          where r.ticket_id=t.id
+        ), '[]'::jsonb)
+      ) order by t.created_at desc)
+      from public.aevtools_support_tickets t
+      where t.user_id=b.user_id
+    ), '[]'::jsonb)
+  ) order by b.created_at desc), '[]'::jsonb)
+  into v_result
+  from public.aevtools_support_blacklist b
+  left join auth.users u on u.id=b.user_id
+  left join auth.users admin_user on admin_user.id=b.admin_user_id;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.aevtools_admin_list_support_blacklist_users() from public;
+grant execute on function public.aevtools_admin_list_support_blacklist_users() to authenticated;
