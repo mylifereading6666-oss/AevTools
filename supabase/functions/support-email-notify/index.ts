@@ -58,12 +58,12 @@ Deno.serve(async (req) => {
   let content = `件名：${ticket.subject}\n種類：${ticket.category}\n\n${ticket.message}`;
 
   if (payload.event === "reply_created") {
+    if (!payload.reply_id) return json({ error: "reply_id_required" }, 400);
     const { data: latestReply, error: replyError } = await db
       .from("aevtools_support_replies")
-      .select("sender_user_id,message,created_at")
+      .select("id,sender_user_id,message,created_at")
+      .eq("id", payload.reply_id)
       .eq("ticket_id", ticket.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .maybeSingle();
     if (replyError || !latestReply) return json({ error: "reply_not_found" }, 404);
 
