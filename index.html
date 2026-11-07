@@ -113,7 +113,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <label for="supportSubject">件名</label><input class="field" id="supportSubject" maxlength="120" placeholder="例：タイマーの音が鳴らない">
 <label for="supportMessage">内容</label><textarea class="field" id="supportMessage" rows="6" maxlength="4000" placeholder="発生した状況、操作、表示されたエラーなど（最大4000文字）"></textarea>
 <button class="btn primary" id="supportSubmit">サポートリクエストを送信</button><p id="supportStatus" class="muted" aria-live="polite"></p></div>
-<div class="panel"><h3>送信したリクエスト・返信</h3><button class="btn" id="supportRefresh">自分のリクエストを更新</button><div id="mySupportList" class="muted">ログイン後に確認できます。</div></div></section>
+<div class="panel"><h3>送信したリクエスト・返信</h3><button class="btn" id="supportRefresh">自分のリクエストを更新</button><div id="mySupportList" class="muted">ログイン後に確認できます。</div></div><div class="panel" style="margin-top:16px"><h3>👤 管理者からの個別チャット</h3><p class="muted">管理者が作成したチャットのみ表示されます。ユーザー側から新しい個別チャットは作成できません。</p><button class="btn" id="refreshMyDirectChats">個別チャットを更新</button><div id="myDirectChatsList"></div></div></section>
 <section class="page" id="page-admin-users"><div class="sectionhead"><div><h2>👥 管理者ユーザー管理・個別チャット</h2><p>管理者専用。登録ユーザーの状態を確認し、管理者から個別チャットを開始できます。</p></div><button class="btn" id="refreshAdminUsers">ユーザー一覧を更新</button></div><div class="panel"><label for="adminUserSearch">ユーザー検索（メール・ID）</label><input class="field" id="adminUserSearch" placeholder="メールアドレスやユーザーIDで検索"><div id="adminUsersList" class="muted">管理者としてログインすると表示されます。</div></div><div class="panel" style="margin-top:16px"><h3>個別チャット</h3><p class="muted">管理者が開始したチャットのみ、対象ユーザーに表示されます。</p><div id="adminDirectChatsList"></div></div></section><section class="page" id="page-admin-blacklist"><div class="sectionhead"><div><h2>🚫 ブラックリスト登録ユーザー</h2><p>管理者専用。登録ユーザー情報とサポート履歴を確認できます。</p></div><button class="btn" id="refreshBlacklistUsers">一覧を更新</button></div><div id="blacklistUsersList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-resolved"><div class="sectionhead"><div><h2>✅ 解決済みサポートリクエスト</h2><p>管理者専用ページ。解決済みのリクエストを確認・受付中に戻せます。</p></div><button class="btn" id="refreshResolvedTickets">一覧を更新</button></div><div id="resolvedSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-cancelled"><div class="sectionhead"><div><h2>🗂 キャンセル済みサポートリクエスト</h2><p>管理者専用ページ。キャンセル理由と内容を確認できます。</p></div><button class="btn" id="refreshCancelledTickets">一覧を更新</button></div><div id="cancelledSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
@@ -373,7 +373,15 @@ $('refreshCancelledTickets').onclick=loadAdminCancelledTickets;
 
 // Admin user directory and admin-created private chats
 let adminUsersCache=[];
-async function loadAdminUsers(){
+async function loadMyDirectChats(){
+ const list=$('myDirectChatsList');if(!list||!supabaseClient)return;list.innerHTML='';
+ const {data,error}=await supabaseClient.rpc('aevtools_list_direct_chats');
+ if(error){list.textContent='個別チャット一覧を取得できませんでした。';return}
+ if(!data?.length){list.textContent='管理者からの個別チャットはまだありません。';return}
+ data.forEach(ch=>{const card=document.createElement('div');card.className='memoitem';const h=document.createElement('h4');h.textContent='💬 Aev0rnJP（管理者）との個別チャット';const p=document.createElement('p');p.textContent='作成日時：'+new Date(ch.created_at).toLocaleString('ja-JP');const b=document.createElement('button');b.className='btn primary';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,'Aev0rnJP（管理者）');card.append(h,p,b);list.append(card)});
+}
+$('refreshMyDirectChats')?.addEventListener('click',loadMyDirectChats);
+\nasync function loadAdminUsers(){
  if(!supabaseClient)return;
  const {data,error}=await supabaseClient.rpc('aevtools_admin_list_users');
  const list=$('adminUsersList');if(!list)return;list.innerHTML='';
@@ -439,12 +447,12 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
   const claimStatus=$('adminClaimStatus'),claimForm=$('adminClaimForm');
   if(!supabaseClient){claimStatus.textContent='認証サービスに接続できません。';claimForm.hidden=true;return}
   const {data:{session}}=await supabaseClient.auth.getSession();
-  if(!session){claimStatus.textContent='管理者状態を確認するにはログインしてください。';claimForm.hidden=true;$('adminToolsPanel').hidden=true;return}
+  if(!session){claimStatus.textContent='管理者状態を確認するにはログインしてください。';claimForm.hidden=true;$('adminToolsPanel').hidden=true;$('adminUsersNav').hidden=true;return}
   try{
    const {data,error}=await supabaseClient.rpc('aevtools_is_admin');
    if(error)throw error;
    if(data===true){claimStatus.textContent='👑 このアカウントは永久管理者です。';claimForm.hidden=true;$('adminToolsPanel').hidden=false;$('adminCancelledNav').hidden=false;$('adminResolvedNav').hidden=false;$('adminBlacklistNav').hidden=false;$('adminUsersNav').hidden=false;loadAdminUsers();loadAdminDirectChats();loadAdminSupportTickets();loadAdminResolvedTickets();loadAdminCancelledTickets();loadAdminBlacklistUsers()}
-   else{claimStatus.textContent='このアカウントは管理者ではありません。管理者登録が未完了の場合のみ、登録コードを入力できます。';claimForm.hidden=false;$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true}
+   else{claimStatus.textContent='このアカウントは管理者ではありません。管理者登録が未完了の場合のみ、登録コードを入力できます。';claimForm.hidden=false;$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true;$('adminUsersNav').hidden=true}
   }catch(e){claimStatus.textContent='管理者状態を確認できません。Supabaseの管理者SQL設定が必要です。';claimForm.hidden=true}
  }
  $('adminClaimSubmit').onclick=async()=>{
@@ -464,7 +472,7 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  async function refreshSession(){
   const {data:{session},error}=await supabaseClient.auth.getSession();
   if(error){status.textContent='ログイン状態を取得できませんでした。';return}
-  if(session){startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
+  if(session){startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();loadMyDirectChats();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
   else{if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
  }
  $('signupSubmit').onclick=async()=>{
