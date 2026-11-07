@@ -424,10 +424,27 @@ async function renderDirectChat(card,chatId,peerName){
  const messages=document.createElement('div');box.append(messages);
  async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'管理者':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\\n'+m.message;messages.append(p)})}
  await refresh();
- const channel=supabaseClient.channel('aev-direct:'+chatId,{config:{private:true,broadcast:{self:false}}});
- box._channel=channel;
- channel.on('broadcast',{event:'new_message'},refresh);
- channel.subscribe(state=>{if(state==='CHANNEL_ERROR'||state==='TIMED_OUT')status.textContent='リアルタイム接続に失敗しました。SQL設定を確認してください。'});
+ let channel=null,retryTimer=null,retryCount=0,disposed=false;
+ const connectDirectRealtime=async()=>{
+  if(disposed||!supabaseClient)return;
+  if(channel){const oldChannel=channel;channel=null;await supabaseClient.removeChannel(oldChannel)}
+  status.textContent='個別チャット · '+peerName+' · 接続中…';
+  const next=supabaseClient.channel('aev-direct:'+chatId,{config:{private:true,broadcast:{self:false}}});
+  channel=next;box._channel=next;
+  next.on('broadcast',{event:'new_message'},refresh);
+  next.subscribe(state=>{
+   if(state==='SUBSCRIBED'){retryCount=0;status.textContent='個別チャット · '+peerName+' · 🟢 リアルタイム接続中'}
+   else if(state==='CHANNEL_ERROR'||state==='TIMED_OUT'||state==='CLOSED'){
+    status.textContent='リアルタイム接続が切れました。再接続しています…';
+    if(retryTimer)clearTimeout(retryTimer);
+    retryTimer=setTimeout(connectDirectRealtime,Math.min(30000,1500*Math.pow(2,retryCount++)));
+   }
+  });
+ };
+ box._reconnect=connectDirectRealtime;
+ box._cleanup=()=>{disposed=true;if(retryTimer)clearTimeout(retryTimer);if(channel)supabaseClient.removeChannel(channel);channel=null;aevRealtimeReconnectors.delete(connectDirectRealtime)};
+ aevRealtimeReconnectors.add(connectDirectRealtime);
+ await connectDirectRealtime();
  const chatMeta=(await supabaseClient.rpc('aevtools_list_direct_chats')).data||[];const chatInfo=chatMeta.find(x=>x.id===chatId);const closed=chatInfo?.status==='closed';if(closed){status.textContent+=' · 🔒このチャットは管理者により終了されています';}const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.disabled=closed;input.placeholder=closed?'終了済みのため送信できません':'メッセージを入力（最大4000文字）';
  const send=document.createElement('button');send.className='btn primary';send.textContent=closed?'チャット終了済み':'送信';send.disabled=closed;
  send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.rpc('aevtools_send_direct_chat_message',{p_chat_id:chatId,p_message:message});send.disabled=false;if(error){toast('送信できませんでした：'+error.message);return}input.value='';await refresh();await channel.send({type:'broadcast',event:'new_message',payload:{chat_id:chatId}})};
@@ -509,11 +526,22 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
 
 /* Realtime support chat enhancement */
 const aevSupportRealtimeChannels = new Map();
+const aevRealtimeReconnectors = new Set();
+let aevRealtimeRecoveryBusy=false;
+async function aevReconnectActiveRealtime(){
+ if(aevRealtimeRecoveryBusy||!supabaseClient||!navigator.onLine)return;
+ aevRealtimeRecoveryBusy=true;
+ try{for(const reconnect of [...aevRealtimeReconnectors]){try{await reconnect()}catch(e){console.warn('Realtime reconnect failed',e)}}}
+ finally{aevRealtimeRecoveryBusy=false}
+}
+window.addEventListener('online',()=>setTimeout(aevReconnectActiveRealtime,800));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(aevReconnectActiveRealtime,500)});
 function supportReplyThread(card,ticketId,isAdmin){
  const open=document.createElement('button');open.className='btn';open.textContent='💬 リアルタイムチャットを開く';card.append(open);
  const thread=document.createElement('div');thread.style.marginTop='12px';thread.hidden=true;card.append(thread);
  let channel=null, messagesBox=null, statusBox=null, typingTimer=null, lastTypingAt=0, loaded=false, myUserId=null;
- const cleanup=()=>{if(channel&&supabaseClient){supabaseClient.removeChannel(channel);channel=null;aevSupportRealtimeChannels.delete(String(ticketId))}};
+ let retryTimer=null,retryCount=0,disposed=false;
+ const cleanup=()=>{disposed=true;if(retryTimer)clearTimeout(retryTimer);if(channel&&supabaseClient){supabaseClient.removeChannel(channel);channel=null;aevSupportRealtimeChannels.delete(String(ticketId))}aevRealtimeReconnectors.delete(setupRealtime)};
  const addStatus=()=>{statusBox=document.createElement('div');statusBox.className='muted';statusBox.style.margin='8px 0';statusBox.textContent='相手の状態を確認しています…';thread.append(statusBox)};
  const refreshStatus=async()=>{
    if(!statusBox)return;
@@ -528,32 +556,38 @@ function supportReplyThread(card,ticketId,isAdmin){
    statusBox.textContent=seen?'⚪ オフライン · 最終アクセス：'+new Date(seen).toLocaleString('ja-JP'):'⚪ オフライン · 最終アクセス：記録なし';
  };
  const setupRealtime=async()=>{
+   if(disposed||!supabaseClient)return;
+   if(channel){const oldChannel=channel;channel=null;await supabaseClient.removeChannel(oldChannel)}
    const {data:{user}}=await supabaseClient.auth.getUser();myUserId=user?.id||null;
    if(!myUserId)return;
    await supabaseClient.rpc('aevtools_support_touch_presence');
    const topic='aev-support:'+ticketId;
-   channel=supabaseClient.channel(topic,{config:{private:true,presence:{key:myUserId},broadcast:{self:false}}});
-   channel.on('presence',{event:'sync'},refreshStatus);
-   channel.on('presence',{event:'join'},refreshStatus);
-   channel.on('presence',{event:'leave'},refreshStatus);
-   channel.on('broadcast',{event:'typing'},payload=>{
-     if(!statusBox)return;
-     if(payload?.payload?.user_id===myUserId)return;
+   const next=supabaseClient.channel(topic,{config:{private:true,presence:{key:myUserId},broadcast:{self:false}}});
+   channel=next;
+   next.on('presence',{event:'sync'},refreshStatus);
+   next.on('presence',{event:'join'},refreshStatus);
+   next.on('presence',{event:'leave'},refreshStatus);
+   next.on('broadcast',{event:'typing'},payload=>{
+     if(!statusBox||payload?.payload?.user_id===myUserId)return;
      statusBox.textContent='🟢 オンライン・入力中';
      clearTimeout(typingTimer);typingTimer=setTimeout(refreshStatus,2500);
    });
-   channel.on('broadcast',{event:'new_message'},async()=>{if(messagesBox)await loadThreadMessages(messagesBox,ticketId);});
-   channel.subscribe(async state=>{
-     if(state==='SUBSCRIBED'){
-       const {data}=await supabaseClient.rpc('aevtools_support_touch_presence');
-       await channel.track({user_id:myUserId,role:isAdmin?'admin':'user',typing:false,last_seen_at:data||new Date().toISOString()});
-       await refreshStatus();
-     }else if(state==='CHANNEL_ERROR'||state==='TIMED_OUT'){
-       if(statusBox)statusBox.textContent='リアルタイム接続に失敗しました。SupabaseのSQLと接続を確認してください。';
-     }
+   next.on('broadcast',{event:'new_message'},async()=>{if(messagesBox)await loadThreadMessages(messagesBox,ticketId);});
+   next.subscribe(async state=>{
+    if(state==='SUBSCRIBED'){
+     retryCount=0;if(statusBox)statusBox.textContent='🟢 リアルタイム接続中';
+     const {data}=await supabaseClient.rpc('aevtools_support_touch_presence');
+     await next.track({user_id:myUserId,role:isAdmin?'admin':'user',typing:false,last_seen_at:data||new Date().toISOString()});
+     await refreshStatus();
+    }else if(state==='CHANNEL_ERROR'||state==='TIMED_OUT'||state==='CLOSED'){
+     if(statusBox)statusBox.textContent='リアルタイム接続が切れました。再接続しています…';
+     if(retryTimer)clearTimeout(retryTimer);
+     retryTimer=setTimeout(setupRealtime,Math.min(30000,1500*Math.pow(2,retryCount++)));
+    }
    });
-   aevSupportRealtimeChannels.set(String(ticketId),channel);
+   aevSupportRealtimeChannels.set(String(ticketId),next);
  };
+ aevRealtimeReconnectors.add(setupRealtime);
  open.onclick=async()=>{
    if(!supabaseClient){toast('ログインしてください');return}
    if(!thread.hidden){thread.hidden=true;open.textContent='💬 リアルタイムチャットを開く';cleanup();return}
