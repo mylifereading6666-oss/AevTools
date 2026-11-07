@@ -252,9 +252,10 @@ syncSecretMode();
  if(!urlInput||!keyInput)return;
  urlInput.value=SUPABASE_URL;keyInput.value=SUPABASE_PUBLISHABLE_KEY;
  $('saveSupabaseConfig').onclick=()=>{
-  const url=urlInput.value.trim().replace(/\\/$/,'');
+  let url=urlInput.value.trim();
+  if(url.endsWith('/'))url=url.slice(0,-1);
   const key=keyInput.value.trim();
-  if(!/^https:\\/\\/[a-z0-9-]+\\.supabase\\.co$/.test(url)){note.textContent='Project URLの形式を確認してください（https://xxxx.supabase.co）。';return}
+  if(!url.startsWith('https://')||!url.endsWith('.supabase.co')||url.includes(' ')){note.textContent='Project URLの形式を確認してください（https://xxxx.supabase.co）。';return}
   if(!key){note.textContent='Publishable keyを入力してください。';return}
   localStorage.setItem('aev_supabase_url',url);localStorage.setItem('aev_supabase_publishable_key',key);
   note.textContent='設定を保存しました。ページを再読み込みして認証機能に接続します。';
