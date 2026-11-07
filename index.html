@@ -381,7 +381,8 @@ async function loadMyDirectChats(){
  data.forEach(ch=>{const card=document.createElement('div');card.className='memoitem';const h=document.createElement('h4');h.textContent='💬 Aev0rnJP（管理者）との個別チャット';const p=document.createElement('p');p.textContent='作成日時：'+new Date(ch.created_at).toLocaleString('ja-JP');const b=document.createElement('button');b.className='btn primary';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,'Aev0rnJP（管理者）');card.append(h,p,b);list.append(card)});
 }
 $('refreshMyDirectChats')?.addEventListener('click',loadMyDirectChats);
-\nasync function loadAdminUsers(){
+
+async function loadAdminUsers(){
  if(!supabaseClient)return;
  const {data,error}=await supabaseClient.rpc('aevtools_admin_list_users');
  const list=$('adminUsersList');if(!list)return;list.innerHTML='';
@@ -434,7 +435,8 @@ async function renderDirectChat(card,chatId,peerName){
 }
 $('refreshAdminUsers')?.addEventListener('click',async()=>{await loadAdminUsers();await loadAdminDirectChats()});
 $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
-\n// Supabase connection is configured for all visitors in the site code.
+
+// Supabase connection is configured for all visitors in the site code.
 // AevTools email/password account authentication (Supabase Auth)
 (function initAevAccount(){
  const status=$('accountStatus'),msg=$('accountMessage'),signup=$('signupForm'),login=$('loginForm'),logout=$('logoutButton');
