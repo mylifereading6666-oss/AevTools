@@ -124,6 +124,14 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 const SUPABASE_URL = 'https://vuqbbwdojwmtehgsyfaq.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_BnrPnMn5fCDrXuloVe7XYw_W5R7JH4E';
 let supabaseClient=null;
+let aevPresenceHeartbeat=null;
+async function aevTouchPresence(){if(!supabaseClient)return;try{await supabaseClient.rpc('aevtools_support_touch_presence')}catch(e){}}
+function startAevPresenceHeartbeat(){
+ if(aevPresenceHeartbeat)clearInterval(aevPresenceHeartbeat);
+ aevTouchPresence();
+ aevPresenceHeartbeat=setInterval(aevTouchPresence,60000);
+}
+
 const $=id=>document.getElementById(id), read=(key,def=[])=>{try{return JSON.parse(localStorage.getItem('aev_'+key))??def}catch{return def}}, save=(key,val)=>localStorage.setItem('aev_'+key,JSON.stringify(val)), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window.toastT);window.toastT=setTimeout(()=>$('toast').style.display='none',2300)}
 function showPage(name){
@@ -456,8 +464,8 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  async function refreshSession(){
   const {data:{session},error}=await supabaseClient.auth.getSession();
   if(error){status.textContent='ログイン状態を取得できませんでした。';return}
-  if(session){status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
-  else{status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
+  if(session){startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
+  else{if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
  }
  $('signupSubmit').onclick=async()=>{
   const email=$('signupEmail').value.trim(),password=$('signupPassword').value;
