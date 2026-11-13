@@ -905,13 +905,11 @@ function renderRoulette(data,session){
     if(aevRouletteAnimationFrame)cancelAnimationFrame(aevRouletteAnimationFrame);
     wheel.classList.remove('roulette-slowing','spinning');wheel.style.animation='none';wheel.style.transition='none';wheel.style.transform='rotate(0deg)';void wheel.offsetWidth;
     startRouletteTick();
-    const slice=360/Math.max(parts.length,1);
-    let wi=parts.findIndex(p=>p.user_id===round.winner_user_id);
-    if(wi<0)wi=parts.findIndex(p=>p.nickname===round.winner_nickname);
-    if(wi<0)wi=0;
-    const center=(wi+.5)*slice,target=((360-center)%360+360)%360;
-    const totalRotation=(duration/1000)*0.8*360+target;
-    const actualSlowdownMs=Math.min(3000,Math.max(100,remaining));
+    const maxSpeed=0.8*360;
+    const actualSlowdownMs=Math.min(2500,Math.max(700,duration*0.3),Math.max(100,remaining));
+    const cruiseMs=Math.max(0,duration-actualSlowdownMs);
+    const cruiseRotation=maxSpeed*(cruiseMs/1000);
+    const slowdownSeconds=actualSlowdownMs/1000;
     const beginSlowdown=()=>{
      if(aevRouletteAnimationRound!==round.id||!wheel.isConnected)return;
      aevRouletteTickSlowDuration=actualSlowdownMs;
@@ -922,10 +920,16 @@ function renderRoulette(data,session){
     aevRouletteSlowdownTimer=setTimeout(beginSlowdown,Math.max(0,remaining-actualSlowdownMs));
     const animate=()=>{
      if(aevRouletteAnimationRound!==round.id||!wheel.isConnected)return;
-     const progress=Math.min(1,Math.max(0,(Date.now()-started)/duration));
-     const eased=progress<.5?4*progress*progress*progress:1-Math.pow(-2*progress+2,3)/2;
-     wheel.style.transform='rotate('+(totalRotation*eased)+'deg)';
-     if(progress<1)aevRouletteAnimationFrame=requestAnimationFrame(animate);
+     const elapsed=Math.min(duration,Math.max(0,Date.now()-started));
+     let angle;
+     if(elapsed<cruiseMs){
+      angle=maxSpeed*(elapsed/1000);
+     }else{
+      const u=Math.min(1,Math.max(0,(elapsed-cruiseMs)/actualSlowdownMs));
+      angle=cruiseRotation+maxSpeed*slowdownSeconds*(u-u*u+(u*u*u)/3);
+     }
+     wheel.style.transform='rotate('+angle+'deg)';
+     if(elapsed<duration)aevRouletteAnimationFrame=requestAnimationFrame(animate);
      else{aevRouletteAnimationFrame=null;stopRouletteTick(true)}
     };
     aevRouletteAnimationFrame=requestAnimationFrame(animate);
