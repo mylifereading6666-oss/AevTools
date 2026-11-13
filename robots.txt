@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mylifereading6666-oss.github.io/AevTools/sitemap.xml
