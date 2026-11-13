@@ -167,7 +167,47 @@ function startAevPresenceHeartbeat(){
  aevPresenceHeartbeat=setInterval(aevTouchPresence,60000);
 }
 
-const $=id=>document.getElementById(id), read=(key,def=[])=>{try{return JSON.parse(localStorage.getItem('aev_'+key))??def}catch{return def}}, save=(key,val)=>localStorage.setItem('aev_'+key,JSON.stringify(val)), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+let aevActiveUserId=localStorage.getItem('aev_active_account_id')||null;
+let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null;
+const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode'];
+function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
+function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
+function aevSetLocal(key,value){localStorage.setItem(aevScopedKey(key),String(value));aevQueueCloudSave()}
+function aevRemoveLocal(key){localStorage.removeItem(aevScopedKey(key));aevQueueCloudSave()}
+function aevQueueCloudSave(){if(!aevCloudReady||!aevActiveUserId||!supabaseClient)return;clearTimeout(aevCloudSaveTimer);aevCloudSaveTimer=setTimeout(aevSaveAccountCloud,650)}
+async function aevSaveAccountCloud(){
+ if(!aevCloudReady||!aevActiveUserId||!supabaseClient)return;
+ try{
+  const storage={};aevAccountStorageKeys.forEach(k=>{const v=localStorage.getItem(aevScopedKey(k));if(v!==null)storage[k]=v});
+  const {error}=await supabaseClient.from('aevtools_user_data').upsert({user_id:aevActiveUserId,data:{version:1,storage},updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  if(error)throw error;
+ }catch(e){console.warn('AevTools account cloud save failed:',e);if(typeof toast==='function')toast('クラウド保存に失敗しました。通信状態を確認してください。')}
+}
+async function aevActivateAccount(session){
+ const userId=session?.user?.id;if(!userId||!supabaseClient)return false;
+ if(aevCloudInitUser===userId)return false;
+ aevCloudInitUser=userId;aevCloudReady=false;
+ const previousId=localStorage.getItem('aev_active_account_id');
+ const legacy=previousId===null||previousId===userId?Object.fromEntries(aevAccountStorageKeys.map(k=>[k,localStorage.getItem(k)])):null;
+ aevActiveUserId=userId;localStorage.setItem('aev_active_account_id',userId);
+ try{
+  const {data:row,error}=await supabaseClient.from('aevtools_user_data').select('data,updated_at').eq('user_id',userId).maybeSingle();
+  if(error)throw error;
+  let changed=previousId!==userId;
+  if(row&&row.data&&row.data.storage){
+   for(const key of aevAccountStorageKeys){const value=row.data.storage[key],target=aevScopedKey(key);if(value==null){if(localStorage.getItem(target)!==null){localStorage.removeItem(target);changed=true}}else if(localStorage.getItem(target)!==value){localStorage.setItem(target,value);changed=true}}
+  }else{
+   for(const key of aevAccountStorageKeys){const value=legacy?.[key],target=aevScopedKey(key);if(value!=null)localStorage.setItem(target,value)}
+   aevCloudReady=true;await aevSaveAccountCloud();
+  }
+  aevCloudReady=true;
+  const syncMarker='aev_cloud_loaded_'+userId;
+  const markerValue=row?.updated_at||'initial';
+  if(changed||sessionStorage.getItem(syncMarker)!==markerValue){sessionStorage.setItem(syncMarker,markerValue);location.reload();return true}
+  return false;
+ }catch(e){aevCloudReady=false;aevCloudInitUser=null;console.error('AevTools account cloud load failed:',e);if(typeof toast==='function')toast('アカウントデータを読み込めませんでした。再読み込みしてください。');return false}
+}
+const $=id=>document.getElementById(id), read=(key,def=[])=>{try{return JSON.parse(aevGetLocal('aev_'+key))??def}catch{return def}}, save=(key,val)=>aevSetLocal('aev_'+key,JSON.stringify(val)), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window.toastT);window.toastT=setTimeout(()=>$('toast').style.display='none',2300)}
 function showPage(name){
  const target=$('page-'+name);
@@ -222,7 +262,7 @@ $('studydatefilter').onchange=renderStudy;$('studyshowall').onclick=()=>{$('stud
 $('studydatefilter').value=new Date().toLocaleDateString('sv-SE');
 $('addstudy').onclick=()=>{addStudy($('studyname').value||'学習', $('studyminutes').value);toast('学習時間を記録しました')};setTimer();renderStudy();
 // Money
-let money=read('money');$('budget').value=localStorage.getItem('aev_budget')||5000;$('budget').onchange=()=>{localStorage.setItem('aev_budget',$('budget').value);renderMoney()};function yen(n){return '¥'+Math.round(n).toLocaleString('ja-JP')}
+let money=read('money');$('budget').value=aevGetLocal('aev_budget')||5000;$('budget').onchange=()=>{aevSetLocal('aev_budget',$('budget').value);renderMoney()};function yen(n){return '¥'+Math.round(n).toLocaleString('ja-JP')}
 function renderMoney(){let now=new Date(),month=now.toISOString().slice(0,7),list=money.filter(m=>m.date.startsWith(month)),inc=list.filter(m=>m.type==='income').reduce((s,m)=>s+m.amount,0),exp=list.filter(m=>m.type==='expense').reduce((s,m)=>s+m.amount,0),budget=Math.max(0,+$('budget').value||0);$('income').textContent=yen(inc);$('expense').textContent=yen(exp);$('balance').textContent=yen(inc-exp);$('budgetbar').style.width=(budget?Math.min(100,exp/budget*100):0)+'%';$('budgettext').textContent=budget?yen(exp)+' / '+yen(budget)+'（'+Math.round(exp/budget*100)+'%）':'予算を設定してください';let el=$('moneylist');el.innerHTML='';if(!money.length){el.innerHTML='<div class="empty">記録はまだありません。</div>';return}money.slice().reverse().forEach(m=>{let d=document.createElement('div');d.className='moneyitem';d.innerHTML='<span></span><span class="amount '+m.type+'"></span><button class="btn">×</button>';d.firstChild.textContent=m.name+' · '+m.cat+' · '+m.date;d.querySelector('.amount').textContent=(m.type==='income'?'+':'−')+yen(m.amount);d.querySelector('button').onclick=()=>{money=money.filter(x=>x.id!==m.id);save('money',money);renderMoney()};el.append(d)})}
 $('addmoney').onclick=()=>{let name=$('moneyname').value.trim(),amount=+$('moneyamount').value;if(!name||amount<=0){toast('項目と金額を入力してください');return}money.push({id:uid(),name,amount,type:$('moneytype').value,cat:$('moneycat').value,date:new Date().toISOString().slice(0,10)});save('money',money);$('moneyname').value='';$('moneyamount').value='';renderMoney();toast('記録を追加しました')};$('clearmoney').onclick=()=>{if(confirm('お小遣いの記録をすべて削除しますか？')){money=[];save('money',money);renderMoney()}};renderMoney();
 // Memo
@@ -275,7 +315,7 @@ async function importSectionJSON(section,file,input){
    if(data.settings.breakmins!=null)$('breakmins').value=data.settings.breakmins;
    timerMode='focus';stopTimer();timerSeconds=Math.max(1,+$('focusmins').value||25)*60;setTimer();
   }
-  if(section==='money'&&data.settings&&data.settings.budget!=null){localStorage.setItem('aev_budget',String(data.settings.budget));$('budget').value=data.settings.budget}
+  if(section==='money'&&data.settings&&data.settings.budget!=null){aevSetLocal('aev_budget',String(data.settings.budget));$('budget').value=data.settings.budget}
   if(section==='task'){tasks=read('tasks');renderTasks()}
   if(section==='focus'){studies=read('studies');renderStudy()}
   if(section==='money'){money=read('money');renderMoney()}
@@ -297,8 +337,8 @@ const secretClues=[
  {id:'about',part:'GLITCH',label:'ヒント2：使い方ページに隠された文字「GLITCH」',title:'情報ページの探検家'},
  {id:'focus',part:'NEON',label:'ヒント3：AevFocusに隠された文字「NEON」',title:'集中ページの探検家'}
 ];
-function readSecretList(key){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return []}}
-function saveSecretList(key,list){localStorage.setItem(key,JSON.stringify(list))}
+function readSecretList(key){try{return JSON.parse(aevGetLocal(key)||'[]')}catch{return []}}
+function saveSecretList(key,list){aevSetLocal(key,JSON.stringify(list))}
 function secretCluesFound(){return readSecretList(clueStorageKey)}
 function secretUnlocks(){return readSecretList(unlockedStorageKey)}
 function hasSecretUnlock(code){return secretUnlocks().includes(code)}
@@ -312,8 +352,8 @@ function updateSecretConsole(){
  const list=$('achievementList');list.innerHTML='';const achievements=[['secret-discoverer','シークレット発見者'],['clue-home','ホームの探検家'],['clue-about','情報ページの探検家'],['clue-focus','集中ページの探検家'],['all-clues','三つのヒントを発見'],['unlock-glitch','グリッチ解放者'],['unlock-neon','ネオン解放者'],['night-explorer','深夜の探検家']];
  const earned=readSecretList(achievementStorageKey);achievements.push(['youtube-supporter','Aev0rnJPのサポーター']);achievements.forEach(([id,title])=>{const a=earned.find(x=>x.id===id),d=document.createElement('div');d.className='achievement-item'+(a?'':' locked');d.textContent=(a?'🏆 ':'🔒 ')+title+(a?' · '+a.date:' · 未解除');list.append(d)});
 }
-function openSecretConsole(){const modal=$('secretModal');modal.classList.add('show');const achievement=localStorage.getItem(secretKey);if(!achievement){const now=new Date().toLocaleString('ja-JP');localStorage.setItem(secretKey,now);$('achievementDate').textContent=now}else $('achievementDate').textContent=achievement;awardSecret('secret-discoverer','シークレット発見者');if(new Date().getHours()>=0&&new Date().getHours()<5)awardSecret('night-explorer','深夜の探検家');syncSecretMode();updateSecretConsole()}
-function syncSecretMode(){const active=localStorage.getItem('aev0rn_mode')==='1';document.body.classList.toggle('aev0rn-mode',active);$('toggleAev0rn').textContent=active?'Aev0rnモードを無効化':'Aev0rnモードを有効化';$('modeStatus').textContent=active?'現在：有効':'現在：通常モード'}
+function openSecretConsole(){const modal=$('secretModal');modal.classList.add('show');const achievement=aevGetLocal(secretKey);if(!achievement){const now=new Date().toLocaleString('ja-JP');aevSetLocal(secretKey,now);$('achievementDate').textContent=now}else $('achievementDate').textContent=achievement;awardSecret('secret-discoverer','シークレット発見者');if(new Date().getHours()>=0&&new Date().getHours()<5)awardSecret('night-explorer','深夜の探検家');syncSecretMode();updateSecretConsole()}
+function syncSecretMode(){const active=aevGetLocal('aev0rn_mode')==='1';document.body.classList.toggle('aev0rn-mode',active);$('toggleAev0rn').textContent=active?'Aev0rnモードを無効化':'Aev0rnモードを有効化';$('modeStatus').textContent=active?'現在：有効':'現在：通常モード'}
 // YouTube supporter achievement: only award after YouTube API confirms subscription.
 // 公開サイト用Google OAuth設定。APIキーはGoogle Cloud側でHTTPリファラーとYouTube Data APIに制限してください。
 const YT_GOOGLE_CLIENT_ID='53363356881-vuk5b3c21eutr6netvmno1avif9a1l81.apps.googleusercontent.com';
@@ -344,7 +384,7 @@ $('verifyYoutubeSubscribe').addEventListener('click',async()=>{
  }catch(err){status.textContent=err.message||'Google認証を開始できませんでした。'}
 });
 secretLogo.addEventListener('click',()=>{secretTapCount++;if(secretTapTimer)clearTimeout(secretTapTimer);secretTapTimer=setTimeout(()=>secretTapCount=0,1800);if(secretTapCount>=7){secretTapCount=0;clearTimeout(secretTapTimer);openSecretConsole()}});
-$('closeSecret').onclick=()=> $('secretModal').classList.remove('show');$('secretModal').onclick=e=>{if(e.target===$('secretModal'))$('closeSecret').click()};$('toggleAev0rn').onclick=()=>{localStorage.setItem('aev0rn_mode',document.body.classList.contains('aev0rn-mode')?'0':'1');syncSecretMode();toast('テーマ設定を保存しました')};$('devDetails').onclick=()=>{$('devDetailsText').hidden=!$('devDetailsText').hidden;$('devDetails').textContent=$('devDetailsText').hidden?'詳細情報を表示':'詳細情報を隠す'};
+$('closeSecret').onclick=()=> $('secretModal').classList.remove('show');$('secretModal').onclick=e=>{if(e.target===$('secretModal'))$('closeSecret').click()};$('toggleAev0rn').onclick=()=>{aevSetLocal('aev0rn_mode',document.body.classList.contains('aev0rn-mode')?'0':'1');syncSecretMode();toast('テーマ設定を保存しました')};$('devDetails').onclick=()=>{$('devDetailsText').hidden=!$('devDetailsText').hidden;$('devDetails').textContent=$('devDetailsText').hidden?'詳細情報を表示':'詳細情報を隠す'};
 $('enterSecretCode').onclick=()=>{$('secretCodeArea').hidden=!$('secretCodeArea').hidden;$('secretCodeMessage').textContent='3つのヒントを集めると通常コードが判明します。急いで解放したい場合は特別コード「6796」も使えます。'};
 $('submitSecretCode').onclick=()=>{const code=$('secretCodeInput').value.trim().toUpperCase();if(code==='6796'){let unlocks=secretUnlocks();['AEV-GLITCH','AEV-NEON'].forEach(x=>{if(!unlocks.includes(x))unlocks.push(x)});saveSecretList(unlockedStorageKey,unlocks);secretClues.forEach(clue=>{let found=secretCluesFound();if(!found.includes(clue.id))found.push(clue.id);saveSecretList(clueStorageKey,found);awardSecret('clue-'+clue.id,clue.title)});awardSecret('secret-discoverer','シークレット発見者');awardSecret('all-clues','三つのヒントを発見');awardSecret('clue-home','ホームの探検家');awardSecret('clue-about','情報ページの探検家');awardSecret('clue-focus','集中ページの探検家');awardSecret('unlock-glitch','グリッチ解放者');awardSecret('unlock-neon','ネオン解放者');awardSecret('night-explorer','深夜の探検家');$('secretCodeMessage').textContent='6796を確認！秘密のヒント・全テーマ・全秘密実績を一括解放しました。';$('secretCodeInput').value='';updateSecretConsole();return}if(secretCluesFound().length<3){$('secretCodeMessage').textContent='先にサイト内の3つのヒントを見つけてください。';return}if(code==='AEV-GLITCH'||code==='AEV-NEON'){let unlocks=secretUnlocks();if(!unlocks.includes(code)){unlocks.push(code);saveSecretList(unlockedStorageKey,unlocks);awardSecret('unlock-'+(code==='AEV-GLITCH'?'glitch':'neon'),code==='AEV-GLITCH'?'グリッチ解放者':'ネオン解放者')}$('secretCodeMessage').textContent='解除成功！ '+code+' が解放されました。';$('secretCodeInput').value='';updateSecretConsole()}else $('secretCodeMessage').textContent='コードが違います。ヒントを確認してください。'};
 $('toggleGlitch').onclick=()=>{document.body.classList.toggle('glitch-mode');document.body.classList.remove('neon-mode');updateSecretConsole();toast('グリッチテーマを切り替えました')};
@@ -521,8 +561,8 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  async function refreshSession(){
   const {data:{session},error}=await supabaseClient.auth.getSession();
   if(error){status.textContent='ログイン状態を取得できませんでした。';return}
-  if(session){startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();loadMyDirectChats();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
-  else{if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
+  if(session){if(await aevActivateAccount(session))return;startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();loadMyDirectChats();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
+  else{if(aevActiveUserId||localStorage.getItem('aev_active_account_id')){aevCloudReady=false;aevActiveUserId=null;localStorage.removeItem('aev_active_account_id');location.reload();return}if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
  }
  $('signupSubmit').onclick=async()=>{
   const email=$('signupEmail').value.trim(),password=$('signupPassword').value;
