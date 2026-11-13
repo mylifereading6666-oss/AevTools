@@ -474,15 +474,16 @@ const secretClues=[
 function readSecretList(key){try{return JSON.parse(aevGetLocal(key)||'[]')}catch{return []}}
 function saveSecretList(key,list){
  aevSetLocal(key,JSON.stringify(list));
- // 実績・ヒント・テーマは解除直後にクラウドへ保存し、ログアウト直前の取りこぼしを防ぐ。
+ // 実績・ヒント・テーマの変更は待ち時間を置かず、その場でクラウド保存を開始する。
  if(aevCloudReady&&aevActiveUserId&&['aev_secret_achievements','aev_secret_clues','aev_secret_unlocks'].includes(key)){
-  aevSaveAccountCloud(aevActiveUserId);
+  return aevFlushAccountCloud(aevActiveUserId);
  }
+ return Promise.resolve(true);
 }
 function secretCluesFound(){return readSecretList(clueStorageKey)}
 function secretUnlocks(){return readSecretList(unlockedStorageKey)}
 function hasSecretUnlock(code){return secretUnlocks().includes(code)}
-function awardSecret(id,title){let list=readSecretList(achievementStorageKey);if(!list.some(x=>x.id===id)){list.push({id,title,date:new Date().toLocaleString('ja-JP')});saveSecretList(achievementStorageKey,list);toast('🏆 実績解除：'+title)}}
+async function awardSecret(id,title){let list=readSecretList(achievementStorageKey);if(!list.some(x=>x.id===id)){list.push({id,title,date:new Date().toLocaleString('ja-JP')});const saved=await saveSecretList(achievementStorageKey,list);toast(saved?'🏆 実績解除・自動保存完了：'+title:'🏆 実績解除：'+title+'（クラウド保存未完了。再接続後に再保存してください）')}}
 function collectClue(id){const clue=secretClues.find(x=>x.id===id);if(!clue)return;let found=secretCluesFound();if(found.includes(id)){toast('このヒントはすでに発見済みです');return}found.push(id);saveSecretList(clueStorageKey,found);awardSecret('clue-'+id,clue.title);toast(clue.label);if(found.length===3)awardSecret('all-clues','三つのヒントを発見');updateSecretConsole()}
 async function syncAdminAchievementUnlocks(){
  if(!supabaseClient)return false;
