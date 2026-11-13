@@ -19,9 +19,12 @@ create table if not exists public.aevtools_board_posts (
   title text not null check (char_length(trim(title)) between 1 and 160),
   body text not null check (char_length(trim(body)) between 1 and 6000),
   image_url text,
+  image_path text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.aevtools_board_posts add column if not exists image_path text;
 
 create table if not exists public.aevtools_board_comments (
   id uuid primary key default gen_random_uuid(),
