@@ -88,6 +88,13 @@ body.menu-open{overflow:hidden!important;height:100dvh;overscroll-behavior:none;
 
 
 .navgroup{border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#10121d;overflow:hidden}.navgroup summary{list-style:none;cursor:pointer;padding:11px 13px;color:#c9c7e8;font-weight:750;user-select:none}.navgroup summary::-webkit-details-marker{display:none}.navgroup summary::after{content:'＋';float:right;color:var(--muted)}.navgroup[open] summary::after{content:'−'}.navgroup .navbtn{margin:2px 0;padding:10px 12px}.profile-role{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:99px;background:#8b7cff25;color:#d4caff;font-size:12px;font-weight:700}.roulette-wheel{width:min(78vw,340px);aspect-ratio:1;border-radius:50%;border:8px solid #7865c7;box-shadow:0 0 30px #7655db55;display:grid;place-items:center;margin:18px auto;background:#25233a;position:relative}.roulette-wheel.spinning{animation:rouletteSpin 1.1s linear infinite}.roulette-wheel.roulette-slowing{animation:none;transition:transform 2.5s cubic-bezier(.12,.72,.08,1)}@keyframes rouletteSpin{to{transform:rotate(360deg)}}.roulette-wheel-center{width:28%;aspect-ratio:1;border-radius:50%;background:#111321;border:3px solid #9b88ff;display:grid;place-items:center;font-size:22px;z-index:1}.roulette-pointer{width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:26px solid #ffcf67;margin:0 auto -24px;position:relative;z-index:2}.roulette-participant{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-bottom:1px solid var(--line)}.roulette-participant:last-child{border-bottom:0}.roulette-participant input{width:86px;margin:0}.winner-chat{border:1px solid #6e5cb5;border-radius:14px;padding:14px;margin:10px 0;background:#131426}
+.roulette-congrats{display:none;position:fixed;inset:0;z-index:9999;background:#070812c9;backdrop-filter:blur(7px);align-items:center;justify-content:center;padding:20px}
+.roulette-congrats.show{display:flex;animation:rouletteCongratsFade .2s ease}
+.roulette-congrats-card{width:min(420px,100%);padding:30px 22px;text-align:center;border:1px solid #a995ff;border-radius:24px;background:linear-gradient(145deg,#29204e,#151a30 72%);box-shadow:0 0 55px #9275ff66,0 20px 70px #0009}
+.roulette-congrats-card .trophy{font-size:54px;line-height:1.3}
+.roulette-congrats-card h2{margin:8px 0;font-size:clamp(24px,6vw,32px);color:#ffe08a}
+.roulette-congrats-card p{margin:0;color:#e2ddff;font-weight:650}
+@keyframes rouletteCongratsFade{from{opacity:0}to{opacity:1}}
 /* Aev0rn secret mode */
 body.aev0rn-mode{--bg:#070611;--panel:#111020;--panel2:#19132c;--accent:#a58bff;--accent2:#6b72ff;--line:#393052;background:radial-gradient(ellipse at 15% 0,#3b176b 0,transparent 38%),radial-gradient(ellipse at 90% 20%,#172c70 0,transparent 35%),var(--bg)}
 body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-mode .hero{background:linear-gradient(125deg,#32145a,#15132b 60%,#102b55);border-color:#8b5de8;box-shadow:0 0 35px #6726a533}body.aev0rn-mode .btn.primary{background:linear-gradient(135deg,#a05cff,#4c5dff);box-shadow:0 0 16px #8d52ff33}body.aev0rn-mode .toolcard:hover{border-color:#a05cff;box-shadow:0 0 22px #6e35ff22}
@@ -189,7 +196,7 @@ html.account-init-pending body{visibility:hidden}
 <div class="row"><button class="btn primary" id="rouletteJoin" disabled>参加する</button><span id="rouletteJoinStatus" class="muted"></span></div>
 <h3>参加者 <span id="rouletteParticipantCount">0</span>人</h3><div id="rouletteParticipants" class="panel">参加者はまだいません。</div></div>
 <div class="panel" id="rouletteAdminControls" hidden style="margin-top:14px"><h3>🛠 管理者コントロール</h3><p class="muted">当選確率の調整値は管理者にだけ表示されます。重みが大きいほど当選確率が上がります。</p><label for="rouletteDuration">ルーレット回転時間（秒・3〜120）</label><input class="field" id="rouletteDuration" type="number" min="3" max="120" value="10"><div class="row"><button class="btn primary" id="rouletteCreateRound">参加受付を開始</button><button class="btn primary" id="rouletteStartSpin" disabled>ルーレットをスタート</button><button class="btn" id="rouletteCreateWinnerChat" disabled>🏆 当選者チャットを作成</button></div><p id="rouletteAdminStatus" class="muted"></p></div>
-<div class="panel" style="margin-top:14px"><h3>🏆 当選者チャット</h3><p class="muted">当選者と管理者だけが閲覧できます。管理者が終了・削除するとメッセージも完全削除されます。</p><div id="rouletteWinnerChats">当選者チャットはありません。</div><div id="rouletteWinnerChatBox"></div></div></section>
+<div class="panel" style="margin-top:14px"><h3>🏆 当選者チャット</h3><p class="muted">当選者と管理者だけが閲覧できます。管理者が終了・削除するとメッセージも完全削除されます。</p><div id="rouletteWinnerChats">当選者チャットはありません。</div><div id="rouletteWinnerChatBox"></div></div></section><div id="rouletteCongrats" class="roulette-congrats" role="status" aria-live="polite"><div class="roulette-congrats-card"><div class="trophy">🏆</div><h2>おめでとうございます！</h2><p id="rouletteCongratsName">ルーレットに当選しました！</p></div></div>
 <section class="page" id="page-admin-users"><div class="sectionhead"><div><h2>👥 管理者ユーザー管理・個別チャット</h2><p>管理者専用。登録ユーザーの状態を確認し、管理者から個別チャットを開始できます。</p></div><button class="btn" id="refreshAdminUsers">ユーザー一覧を更新</button></div><div class="panel"><label for="adminUserSearch">ユーザー検索（メール・ID）</label><input class="field" id="adminUserSearch" placeholder="メールアドレスやユーザーIDで検索"><div id="adminUsersList" class="muted">管理者としてログインすると表示されます。</div></div><div class="panel" style="margin-top:16px"><h3>個別チャット</h3><p class="muted">管理者が開始したチャットのみ、対象ユーザーに表示されます。</p><div id="adminDirectChatsList"></div></div></section><section class="page" id="page-admin-blacklist"><div class="sectionhead"><div><h2>🚫 ブラックリスト登録ユーザー</h2><p>管理者専用。登録ユーザー情報とサポート履歴を確認できます。</p></div><button class="btn" id="refreshBlacklistUsers">一覧を更新</button></div><div id="blacklistUsersList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-resolved"><div class="sectionhead"><div><h2>✅ 解決済みサポートリクエスト</h2><p>管理者専用ページ。解決済みのリクエストを確認・受付中に戻せます。</p></div><button class="btn" id="refreshResolvedTickets">一覧を更新</button></div><div id="resolvedSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-cancelled"><div class="sectionhead"><div><h2>🗂 キャンセル済みサポートリクエスト</h2><p>管理者専用ページ。キャンセル理由と内容を確認できます。</p></div><button class="btn" id="refreshCancelledTickets">一覧を更新</button></div><div id="cancelledSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
@@ -815,6 +822,18 @@ function rouletteTone(freq,duration,type='square',volume=.045){try{const A=windo
 function startRouletteTick(){stopRouletteTick(false);aevRouletteTickIndex=0;rouletteTone(720,.035,'square',.025);aevRouletteTickTimer=setInterval(()=>{aevRouletteTickIndex++;rouletteTone(aevRouletteTickIndex%2?620:760,.035,'square',.025)},115)}
 function stopRouletteTick(play=false){if(aevRouletteTickTimer){clearInterval(aevRouletteTickTimer);aevRouletteTickTimer=null}if(play){rouletteTone(980,.11,'sine',.075);setTimeout(()=>rouletteTone(1320,.16,'sine',.065),105)}}
 let aevOpenWinnerChatId=null;
+let aevRouletteCongratsRoundId=null,aevRouletteCongratsTimer=null;
+function showRouletteCongrats(round){
+ if(!round?.id||aevRouletteCongratsRoundId===round.id)return;
+ const {data:{session}}=window.__aevLastRouletteSession||{data:{session:null}};
+ if(!session||session.user.id!==round.winner_user_id)return;
+ aevRouletteCongratsRoundId=round.id;
+ const modal=$('rouletteCongrats');if(!modal)return;
+ $('rouletteCongratsName').textContent=(round.winner_nickname||'あなた')+' さん、ルーレット当選おめでとうございます！';
+ modal.classList.add('show');
+ if(aevRouletteCongratsTimer)clearTimeout(aevRouletteCongratsTimer);
+ aevRouletteCongratsTimer=setTimeout(()=>{modal.classList.remove('show');aevRouletteCongratsTimer=null},3000);
+}
 
 async function refreshAevProfile(){
  if(!supabaseClient)return;
@@ -847,6 +866,7 @@ async function ensureRouletteRealtime(){
 }
 function rouletteColor(i,n){return 'hsl('+Math.round(i*360/Math.max(n,1))+',65%,45%)'}
 function renderRoulette(data,session){
+ window.__aevLastRouletteSession={data:{session}};
  aevRouletteState=data;const round=data.round,parts=data.participants||[],admin=data.is_admin===true,emailLogin=session?.user?.app_metadata?.provider==='email'||(session?.user?.app_metadata?.providers||[]).includes('email');
  $('rouletteAdminControls').hidden=!admin;
  $('rouletteParticipantCount').textContent=parts.length;
@@ -870,7 +890,7 @@ function renderRoulette(data,session){
   join.disabled=!emailLogin||round.status!=='open'||data.my_joined;join.textContent=data.my_joined?'参加登録済み':!emailLogin?'メールログインが必要':'参加する';
   start.disabled=!admin||round.status!=='open'||parts.length===0;
   create.disabled=round.status==='open'||round.status==='spinning';
-  $('rouletteWinner').textContent=round.status==='finished'?'🏆 当選者：'+(round.winner_nickname||'当選者'): '';$('rouletteCreateWinnerChat').disabled=!admin||round.status!=='finished'||!round.winner_user_id;
+  $('rouletteWinner').textContent=round.status==='finished'?'🏆 当選者：'+(round.winner_nickname||'当選者'): '';if(round.status==='finished')showRouletteCongrats(round);$('rouletteCreateWinnerChat').disabled=!admin||round.status!=='finished'||!round.winner_user_id;
   if(round.status==='spinning'){
    const started=round.started_at?new Date(round.started_at).getTime():Date.now(),duration=Math.max(3,Number(round.spin_duration_seconds||10))*1000,remaining=Math.max(0,started+duration-Date.now());
    const slowdownMs=2500;
