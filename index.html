@@ -466,6 +466,33 @@ function secretUnlocks(){return readSecretList(unlockedStorageKey)}
 function hasSecretUnlock(code){return secretUnlocks().includes(code)}
 function awardSecret(id,title){let list=readSecretList(achievementStorageKey);if(!list.some(x=>x.id===id)){list.push({id,title,date:new Date().toLocaleString('ja-JP')});saveSecretList(achievementStorageKey,list);toast('🏆 実績解除：'+title)}}
 function collectClue(id){const clue=secretClues.find(x=>x.id===id);if(!clue)return;let found=secretCluesFound();if(found.includes(id)){toast('このヒントはすでに発見済みです');return}found.push(id);saveSecretList(clueStorageKey,found);awardSecret('clue-'+id,clue.title);toast(clue.label);if(found.length===3)awardSecret('all-clues','三つのヒントを発見');updateSecretConsole()}
+async function syncAdminAchievementUnlocks(){
+ if(!supabaseClient)return false;
+ try{
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(!session)return false;
+  const {data,isError}=await supabaseClient.rpc('aevtools_is_admin');
+  if(isError||data!==true)return false;
+  const allAchievements=[
+   ['secret-discoverer','シークレット発見者'],
+   ['clue-home','ホームの探検家'],
+   ['clue-about','情報ページの探検家'],
+   ['clue-focus','集中ページの探検家'],
+   ['all-clues','三つのヒントを発見'],
+   ['unlock-glitch','グリッチ解放者'],
+   ['unlock-neon','ネオン解放者'],
+   ['night-explorer','深夜の探検家'],
+   ['youtube-supporter','Aev0rnJPのサポーター']
+  ];
+  const earned=readSecretList(achievementStorageKey),now=new Date().toLocaleString('ja-JP');
+  for(const [id,title] of allAchievements)if(!earned.some(x=>x.id===id))earned.push({id,title,date:now});
+  saveSecretList(achievementStorageKey,earned);
+  saveSecretList(clueStorageKey,['home','about','focus']);
+  saveSecretList(unlockedStorageKey,['AEV-GLITCH','AEV-NEON']);
+  updateSecretConsole();
+  return true;
+ }catch(e){console.warn('Admin achievement sync failed:',e);return false}
+}
 function updateSecretConsole(){
  const found=secretCluesFound(),unlocks=secretUnlocks();$('clueStatus').textContent='ヒント：'+found.length+' / 3'+(found.length===3?'｜コード判明：AEV-GLITCH / AEV-NEON':'');
  $('toggleGlitch').disabled=!unlocks.includes('AEV-GLITCH');$('toggleGlitch').textContent=unlocks.includes('AEV-GLITCH')?'⚡ グリッチモードを切り替え':'⚡ グリッチモード（未解除）';
@@ -678,7 +705,7 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
   try{
    const {data,error}=await supabaseClient.rpc('aevtools_claim_admin',{p_code:code});
    if(error)throw error;
-   if(data&&data.ok){$('adminClaimMessage').textContent='管理者登録済みです。このアカウントが永久管理者になりました。';$('adminClaimCode').value='';await refreshAdminStatus()}
+   if(data&&data.ok){$('adminClaimMessage').textContent='管理者登録済みです。このアカウントが永久管理者になりました。';$('adminClaimCode').value='';await refreshAdminStatus();syncAdminAchievementUnlocks()}
    else if(data&&data.reason==='admin_already_exists'){$('adminClaimMessage').textContent='管理者はすでに登録済みです。2人目の管理者登録はできません。';$('adminClaimForm').hidden=true}
    else if(data&&data.reason==='invalid_code'){$('adminClaimMessage').textContent='管理者コードが違います。'}
    else{$('adminClaimMessage').textContent='登録できませんでした。ログイン状態を確認してください。'}
