@@ -230,7 +230,7 @@ function startAevPresenceHeartbeat(){
 
 let aevActiveUserId=localStorage.getItem('aev_active_account_id')||null;
 let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null,aevCloudSavePromise=Promise.resolve();
-const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_memo_tombstones','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
+const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_memo_tombstones','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings','aev_roulette_congrats_seen'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
 function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
 function aevSetLocal(key,value){localStorage.setItem(aevScopedKey(key),String(value));aevQueueCloudSave()}
@@ -827,8 +827,13 @@ function showRouletteCongrats(round){
  if(!round?.id||aevRouletteCongratsRoundId===round.id)return;
  const {data:{session}}=window.__aevLastRouletteSession||{data:{session:null}};
  if(!session||session.user.id!==round.winner_user_id)return;
- aevRouletteCongratsRoundId=round.id;
  const modal=$('rouletteCongrats');if(!modal)return;
+ let seen=[];try{seen=JSON.parse(aevGetLocal('aev_roulette_congrats_seen')||'[]');if(!Array.isArray(seen))seen=[]}catch(e){seen=[]}
+ const roundKey=String(round.id);
+ if(seen.includes(roundKey)){aevRouletteCongratsRoundId=round.id;return}
+ aevRouletteCongratsRoundId=round.id;
+ seen.push(roundKey);if(seen.length>500)seen=seen.slice(-500);
+ aevSetLocal('aev_roulette_congrats_seen',JSON.stringify(seen));
  $('rouletteCongratsName').textContent=(round.winner_nickname||'あなた')+' さん、ルーレット当選おめでとうございます！';
  modal.classList.add('show');
  if(aevRouletteCongratsTimer)clearTimeout(aevRouletteCongratsTimer);
