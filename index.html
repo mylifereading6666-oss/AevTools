@@ -289,7 +289,7 @@ $('jsonImportWarning').onclick=e=>{if(e.target===$('jsonImportWarning'))$('jsonI
 const jsonBackupConfig={
  task:{keys:['tasks'],filename:'AevTask-backup.json',validate:d=>Array.isArray(d.tasks)&&d.tasks.every(x=>x&&typeof x.name==='string'&&typeof x.done==='boolean')},
  focus:{keys:['studies'],filename:'AevFocus-backup.json',extra:()=>({focusgoal:$('focusgoal').value,focusmins:$('focusmins').value,breakmins:$('breakmins').value,timerSound:$('timerSound').checked,timerPopup:$('timerPopup').checked}),validate:d=>Array.isArray(d.studies)&&d.studies.every(x=>x&&typeof x.name==='string'&&Number.isFinite(+x.minutes)&&typeof x.date==='string')},
- money:{keys:['money'],filename:'AevMoney-backup.json',extra:()=>({budget:localStorage.getItem('aev_budget')||$('budget').value}),validate:d=>Array.isArray(d.money)&&d.money.every(x=>x&&typeof x.name==='string'&&Number.isFinite(+x.amount)&&['income','expense'].includes(x.type)&&typeof x.date==='string')},
+ money:{keys:['money'],filename:'AevMoney-backup.json',extra:()=>({budget:aevGetLocal('aev_budget')||$('budget').value}),validate:d=>Array.isArray(d.money)&&d.money.every(x=>x&&typeof x.name==='string'&&Number.isFinite(+x.amount)&&['income','expense'].includes(x.type)&&typeof x.date==='string')},
  memo:{keys:['memos'],filename:'AevMemo-backup.json',validate:d=>Array.isArray(d.memos)&&d.memos.every(x=>x&&typeof x.body==='string'&&typeof x.title==='string')}
 };
 function exportSectionJSON(section){
