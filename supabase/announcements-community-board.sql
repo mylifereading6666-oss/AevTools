@@ -51,21 +51,21 @@ drop policy if exists "AevTools announcements admin insert" on public.aevtools_a
 create policy "AevTools announcements admin insert" on public.aevtools_announcements
 for insert to authenticated with check (
   created_by = auth.uid()
-  and exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  and public.aevtools_is_admin()
 );
 
 drop policy if exists "AevTools announcements admin update" on public.aevtools_announcements;
 create policy "AevTools announcements admin update" on public.aevtools_announcements
 for update to authenticated using (
-  exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  public.aevtools_is_admin()
 ) with check (
-  exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  public.aevtools_is_admin()
 );
 
 drop policy if exists "AevTools announcements admin delete" on public.aevtools_announcements;
 create policy "AevTools announcements admin delete" on public.aevtools_announcements
 for delete to authenticated using (
-  exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  public.aevtools_is_admin()
 );
 
 drop policy if exists "AevTools board posts public read" on public.aevtools_board_posts;
@@ -79,15 +79,15 @@ for insert to authenticated with check (user_id=auth.uid());
 drop policy if exists "AevTools board posts owner or admin update" on public.aevtools_board_posts;
 create policy "AevTools board posts owner or admin update" on public.aevtools_board_posts
 for update to authenticated using (
-  user_id=auth.uid() or exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  user_id=auth.uid() or public.aevtools_is_admin()
 ) with check (
-  user_id=auth.uid() or exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  user_id=auth.uid() or public.aevtools_is_admin()
 );
 
 drop policy if exists "AevTools board posts owner or admin delete" on public.aevtools_board_posts;
 create policy "AevTools board posts owner or admin delete" on public.aevtools_board_posts
 for delete to authenticated using (
-  user_id=auth.uid() or exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  user_id=auth.uid() or public.aevtools_is_admin()
 );
 
 drop policy if exists "AevTools board comments public read" on public.aevtools_board_comments;
@@ -101,7 +101,7 @@ for insert to authenticated with check (user_id=auth.uid());
 drop policy if exists "AevTools board comments owner or admin delete" on public.aevtools_board_comments;
 create policy "AevTools board comments owner or admin delete" on public.aevtools_board_comments
 for delete to authenticated using (
-  user_id=auth.uid() or exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+  user_id=auth.uid() or public.aevtools_is_admin()
 );
 
 -- The author label is assigned by the database, not trusted from the browser.
@@ -142,13 +142,13 @@ create policy "AevTools board images owner delete" on storage.objects
 for delete to authenticated using (
   bucket_id='aev-board-images' and (
     (storage.foldername(name))[1]=auth.uid()::text
-    or exists(select 1 from public.aevtools_admin where user_id=auth.uid())
+    or public.aevtools_is_admin()
   )
 );
 
--- RLS policies below/above check admin membership by reading this table.
--- Authenticated users get read-only table privilege; write access remains restricted.
-grant select on public.aevtools_admin to authenticated;
+-- Admin checks use the SECURITY DEFINER helper because aevtools_admin has RLS enabled.
+-- The helper checks the permanent admin row without exposing the admin table.
+grant execute on function public.aevtools_is_admin() to authenticated;
 
 grant select, insert, update, delete on public.aevtools_announcements to authenticated;
 grant select on public.aevtools_announcements to anon;
