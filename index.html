@@ -898,7 +898,7 @@ function renderRoulette(data,session){
     aevRouletteAnimationRound=round.id;
     if(aevRouletteSlowdownTimer)clearTimeout(aevRouletteSlowdownTimer);
     wheel.classList.remove('roulette-slowing','spinning');wheel.style.transition='none';wheel.style.transform='';void wheel.offsetWidth;wheel.classList.add('spinning');startRouletteTick();
-    const actualSlowdownMs=Math.min(slowdownMs,Math.max(400,remaining-250));
+    const actualSlowdownMs=Math.min(slowdownMs,Math.max(100,remaining-150));
     const beginSlowdown=()=>{
      if(aevRouletteAnimationRound!==round.id||!wheel.isConnected)return;
      const matrix=getComputedStyle(wheel).transform;
