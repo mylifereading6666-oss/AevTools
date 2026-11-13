@@ -910,7 +910,7 @@ function renderRoulette(data,session){
     if(wi<0)wi=parts.findIndex(p=>p.nickname===round.winner_nickname);
     if(wi<0)wi=0;
     const center=(wi+.5)*slice,target=((360-center)%360+360)%360;
-    const totalRotation=2880+target;
+    const totalRotation=(duration/1000)*0.8*360+target;
     const actualSlowdownMs=Math.min(3000,Math.max(100,remaining));
     const beginSlowdown=()=>{
      if(aevRouletteAnimationRound!==round.id||!wheel.isConnected)return;
