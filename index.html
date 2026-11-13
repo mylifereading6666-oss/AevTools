@@ -362,7 +362,7 @@ async function loadMyDirectChats(){
  const {data,error}=await supabaseClient.rpc('aevtools_list_direct_chats');
  if(error){list.textContent='個別チャット一覧を取得できませんでした。';return}
  if(!data?.length){list.textContent='管理者からの個別チャットはまだありません。';return}
- data.forEach(ch=>{const card=document.createElement('div');card.className='memoitem';const h=document.createElement('h4');h.textContent='💬 管理者との個別チャット';const p=document.createElement('p');p.textContent='作成日時：'+new Date(ch.created_at).toLocaleString('ja-JP');const b=document.createElement('button');b.className='btn primary';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,'Aev0rnJP（管理者）');card.append(h,p,b);list.append(card)});
+ data.forEach(ch=>{const card=document.createElement('div');card.className='memoitem';const h=document.createElement('h4');h.textContent='💬 '+(ch.admin_nickname||'管理者')+'との個別チャット';const p=document.createElement('p');p.textContent='作成日時：'+new Date(ch.created_at).toLocaleString('ja-JP');const b=document.createElement('button');b.className='btn primary';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,ch.admin_nickname||'管理者');card.append(h,p,b);list.append(card)});
 }
 $('refreshMyDirectChats')?.addEventListener('click',loadMyDirectChats);
 
@@ -715,7 +715,7 @@ function supportReplyThread(card,ticketId,isAdmin){
    await loadThreadMessages(messagesBox,ticketId);
    loaded=true;
    const form=document.createElement('div');form.style.marginTop='12px';
-   const label=document.createElement('label');label.textContent=isAdmin?'Aev0rnJPからの返信':'返信内容';
+   const label=document.createElement('label');label.textContent=isAdmin?(aevCurrentProfile?.nickname||'管理者')+'からの返信':'返信内容';
    const input=document.createElement('textarea');input.className='field';input.rows=4;input.maxLength=4000;input.placeholder='返信を入力してください（最大4000文字）';
    const send=document.createElement('button');send.className='btn primary';send.textContent='返信を送信';
    const sendStatus=document.createElement('p');sendStatus.className='muted';
