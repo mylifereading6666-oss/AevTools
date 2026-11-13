@@ -208,24 +208,31 @@ async function aevActivateAccount(session){
    const {data:row,error}=await supabaseClient.from('aevtools_user_data').select('data,updated_at').eq('user_id',userId).maybeSingle();
    if(error)throw error;
    if(aevCloudInitUser!==userId)return true;
-   let changed=previousId!==userId;
+   let changed=previousId!==userId,needsCloudRepair=false;
    if(row&&row.data&&row.data.storage){
     for(const key of aevAccountStorageKeys){
      const value=row.data.storage[key],target='aev_account_'+userId+'_'+key;
-     if(value==null){if(localStorage.getItem(target)!==null){localStorage.removeItem(target);changed=true}}
-     else if(localStorage.getItem(target)!==value){localStorage.setItem(target,value);changed=true}
+     if(value==null){
+      // A missing cloud field is not proof that local account data should be deleted.
+      // Preserve this user's scoped local copy and upload it back to the cloud.
+      if(localStorage.getItem(target)!==null)needsCloudRepair=true;
+     }else if(localStorage.getItem(target)!==value){localStorage.setItem(target,value);changed=true}
     }
    }else{
     for(const key of aevAccountStorageKeys){
      const value=legacy?.[key],target='aev_account_'+userId+'_'+key;
      if(value!=null)localStorage.setItem(target,value);
     }
-    aevCloudReady=true;await aevSaveAccountCloud();
+    needsCloudRepair=true;
    }
    if(aevCloudInitUser!==userId)return true;
    // Remove old shared, unscoped values after migration/restore.
    for(const key of aevAccountStorageKeys)localStorage.removeItem(key);
    aevCloudReady=true;
+   if(needsCloudRepair){
+    const repaired=await aevSaveAccountCloud(userId);
+    if(!repaired)throw new Error('アカウントデータの不足分をクラウドへ保存できませんでした');
+   }
    if(changed){location.reload();return true}
    return false;
   }catch(e){
