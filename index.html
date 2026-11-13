@@ -595,7 +595,7 @@ function renderRoulette(data){
 async function refreshRouletteState(){
  if(!supabaseClient)return;
  const {data:{session}}=await supabaseClient.auth.getSession();
- if(!session){$('rouletteStatus').textContent='ルーレットに参加するにはログインしてください。';$('rouletteJoin').disabled=true;$('rouletteAdminControls').hidden=true;$('rouletteWinnerChats').textContent='ログイン後に確認できます。';$('rouletteWinnerChatBox').innerHTML='';return}
+ if(!session){aevRouletteState=null;aevOpenWinnerChatId=null;$('rouletteStatus').textContent='ルーレットに参加するにはログインしてください。';$('rouletteJoin').disabled=true;$('rouletteAdminControls').hidden=true;$('rouletteParticipants').textContent='ログイン後に表示されます。';$('rouletteParticipantCount').textContent='0';$('rouletteWheel').querySelectorAll('.roulette-slot-label').forEach(el=>el.remove());$('rouletteWheel').classList.remove('spinning');$('rouletteWheel').style.background='conic-gradient(#292b40 0deg 360deg)';$('rouletteWinner').textContent='';$('rouletteWinnerChats').textContent='ログイン後に確認できます。';$('rouletteWinnerChatBox').innerHTML='';return}
  const {data,error}=await supabaseClient.rpc('aevtools_roulette_get_state');
  if(error){$('rouletteAdminControls').hidden=true;$('rouletteStatus').textContent='ルーレットSQLを実行すると利用できます。';return}
  renderRoulette(data);
