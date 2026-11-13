@@ -176,6 +176,8 @@ function showPage(name){
  $('sidebar').classList.remove('open');$('overlay').classList.remove('show');document.body.classList.remove('menu-open');
  try{history.replaceState(null,'','#'+name)}catch(e){}
  window.scrollTo({top:0,behavior:'smooth'});
+ if(name==='announcements')loadAnnouncements();
+ if(name==='board')loadBoard();
 }
 document.querySelectorAll('[data-page]').forEach(el=>{
  const name=el.getAttribute('data-page');
