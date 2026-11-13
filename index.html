@@ -212,6 +212,7 @@ async function aevActivateAccount(session){
    if(row&&row.data&&row.data.storage){
     for(const key of aevAccountStorageKeys){
      const value=row.data.storage[key],target='aev_account_'+userId+'_'+key,localValue=localStorage.getItem(target);
+     if(key==='aev_memo_tombstones')continue;
      if(key==='aev_memos'){
       const parseArray=v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}};
       const localMemos=parseArray(localValue),cloudMemos=parseArray(value);
