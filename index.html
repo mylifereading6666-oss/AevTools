@@ -40,6 +40,7 @@ body.aev0rn-mode{--bg:#070611;--panel:#111020;--panel2:#19132c;--accent:#a58bff;
 body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-mode .hero{background:linear-gradient(125deg,#32145a,#15132b 60%,#102b55);border-color:#8b5de8;box-shadow:0 0 35px #6726a533}body.aev0rn-mode .btn.primary{background:linear-gradient(135deg,#a05cff,#4c5dff);box-shadow:0 0 16px #8d52ff33}body.aev0rn-mode .toolcard:hover{border-color:#a05cff;box-shadow:0 0 22px #6e35ff22}
 .secret-modal{display:none;position:fixed;inset:0;z-index:150;background:#03020bd9;backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px}.secret-modal.show{display:flex}.secret-window{width:min(680px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#171329,#0d1020);border:1px solid #6b55a8;border-radius:20px;padding:22px;box-shadow:0 0 55px #642eff35}.secret-window h2{margin:0 0 8px}.secret-window .secret-section{border:1px solid var(--line);border-radius:13px;padding:14px;margin:12px 0;background:#0b0d18}.secret-achievement{display:inline-flex;gap:8px;align-items:center;border:1px solid #9c7aff;background:#8b7cff20;color:#d9ccff;padding:7px 11px;border-radius:99px;font-size:13px}
 .achievement-list{display:grid;gap:8px;margin-top:10px}.achievement-item{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#111322}.achievement-item.locked{opacity:.45}.secret-window input{width:100%;box-sizing:border-box;margin:8px 0;padding:11px;border-radius:10px;border:1px solid #65558b;background:#090914;color:#fff}.secret-window button:disabled{opacity:.45;cursor:not-allowed}body.glitch-mode{animation:glitchbg 1.8s infinite;background:linear-gradient(120deg,#080808,#171020,#061820)!important}body.glitch-mode .topbar,body.glitch-mode .panel,body.glitch-mode .toolcard{border-color:#00f5ff!important;box-shadow:2px 0 #ff00aa,-2px 0 #00f5ff!important}body.glitch-mode h1,body.glitch-mode h2,body.glitch-mode h3{ text-shadow:2px 0 #ff00aa,-2px 0 #00f5ff}body.neon-mode{--bg:#050816;--panel:#09162b;--panel2:#0c2040;--accent:#00f5ff;--accent2:#ff36d1;--line:#1a6c91;background:radial-gradient(ellipse at 20% 0,#003c66,transparent 40%),radial-gradient(ellipse at 90% 80%,#4d0058,transparent 40%),#050816!important}body.neon-mode .btn.primary{background:linear-gradient(90deg,#00cfff,#ff36d1);box-shadow:0 0 18px #00cfff55}body.neon-mode .toolcard:hover{box-shadow:0 0 24px #00f5ff55}
+.community-link{display:inline-block;color:#bdb4ff;text-decoration:underline;overflow-wrap:anywhere;margin:5px 12px 0 0}.community-image{display:block;max-width:100%;max-height:420px;object-fit:contain;border-radius:12px;margin:12px 0;border:1px solid var(--line)}.community-comment{padding:10px 12px;margin:8px 0;border:1px solid var(--line);border-radius:11px;background:#10121d}.community-comment p{white-space:pre-wrap;margin:6px 0 0}.community-post{margin:14px 0}.community-post-body{white-space:pre-wrap;overflow-wrap:anywhere;color:#d6d7e8}.community-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.community-reply{display:flex;gap:8px;align-items:flex-start;margin-top:12px}.community-reply textarea{flex:1;min-width:0}.community-meta{font-size:12px;color:var(--muted);margin:5px 0 12px}
 </style>
 </head>
 <body>
@@ -48,7 +49,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <div class="overlay" id="overlay"></div>
 <div class="layout">
 <aside class="sidebar" id="sidebar"><div class="navlabel">MENU / メニュー</div>
-<details class="navgroup" open><summary>🏠 ホーム</summary><button class="navbtn active" data-page="home"><span class="navicon">⌂</span>ホーム</button></details>
+<details class="navgroup" open><summary>🏠 ホーム</summary><button class="navbtn active" data-page="home"><span class="navicon">⌂</span>ホーム</button><button class="navbtn" data-page="announcements"><span class="navicon">📢</span>お知らせ</button><button class="navbtn" data-page="board"><span class="navicon">💬</span>掲示板</button></details>
 <details class="navgroup" open><summary>🧰 ツール</summary>
 <button class="navbtn" data-page="task"><span class="navicon">☑</span>AevTask</button><button class="navbtn" data-page="tools"><span class="navicon">⚒</span>AevTools</button><button class="navbtn" data-page="focus"><span class="navicon">◷</span>AevFocus</button><button class="navbtn" data-page="money"><span class="navicon">￥</span>AevMoney</button><button class="navbtn" data-page="memo"><span class="navicon">▤</span>AevMemo</button>
 </details>
@@ -138,6 +139,8 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <section class="page" id="page-admin-users"><div class="sectionhead"><div><h2>👥 管理者ユーザー管理・個別チャット</h2><p>管理者専用。登録ユーザーの状態を確認し、管理者から個別チャットを開始できます。</p></div><button class="btn" id="refreshAdminUsers">ユーザー一覧を更新</button></div><div class="panel"><label for="adminUserSearch">ユーザー検索（メール・ID）</label><input class="field" id="adminUserSearch" placeholder="メールアドレスやユーザーIDで検索"><div id="adminUsersList" class="muted">管理者としてログインすると表示されます。</div></div><div class="panel" style="margin-top:16px"><h3>個別チャット</h3><p class="muted">管理者が開始したチャットのみ、対象ユーザーに表示されます。</p><div id="adminDirectChatsList"></div></div></section><section class="page" id="page-admin-blacklist"><div class="sectionhead"><div><h2>🚫 ブラックリスト登録ユーザー</h2><p>管理者専用。登録ユーザー情報とサポート履歴を確認できます。</p></div><button class="btn" id="refreshBlacklistUsers">一覧を更新</button></div><div id="blacklistUsersList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-resolved"><div class="sectionhead"><div><h2>✅ 解決済みサポートリクエスト</h2><p>管理者専用ページ。解決済みのリクエストを確認・受付中に戻せます。</p></div><button class="btn" id="refreshResolvedTickets">一覧を更新</button></div><div id="resolvedSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-cancelled"><div class="sectionhead"><div><h2>🗂 キャンセル済みサポートリクエスト</h2><p>管理者専用ページ。キャンセル理由と内容を確認できます。</p></div><button class="btn" id="refreshCancelledTickets">一覧を更新</button></div><div id="cancelledSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
+<section class="page" id="page-announcements"><div class="sectionhead"><div><h2>📢 AevTools お知らせ</h2><p>運営からのお知らせ・更新情報・動画リンクを掲載します。</p></div><button class="btn" id="announcementsRefresh">更新</button></div><div class="panel" id="announcementAdminPanel" hidden><h3>👑 お知らせを管理</h3><input class="field" id="announcementTitle" maxlength="160" placeholder="お知らせのタイトル"><textarea class="field" id="announcementBody" rows="4" maxlength="6000" placeholder="お知らせ本文"></textarea><label>通常のURL（任意）</label><input class="field" id="announcementLink" type="url" placeholder="https://..."><label>動画URL（任意）</label><input class="field" id="announcementVideo" type="url" placeholder="YouTubeなどの動画URL"><div class="row"><button class="btn primary" id="announcementSave">お知らせを投稿</button><button class="btn" id="announcementCancelEdit" hidden>編集をキャンセル</button></div><p class="muted" id="announcementAdminStatus"></p></div><div id="announcementsList"><div class="empty">お知らせを読み込み中...</div></div></section>
+<section class="page" id="page-board"><div class="sectionhead"><div><h2>💬 AevTools 掲示板</h2><p>ユーザー・管理者が投稿し、返信で会話できるコミュニティです。</p></div><button class="btn" id="boardRefresh">更新</button></div><div class="panel"><h3>✍️ 新しい投稿</h3><p class="muted">投稿・返信にはメールアドレスでのログインが必要です。画像は5MBまで（JPEG・PNG・WebP・GIF）。</p><input class="field" id="boardTitle" maxlength="160" placeholder="タイトル"><textarea class="field" id="boardBody" rows="5" maxlength="6000" placeholder="説明や伝えたいことを入力してください"></textarea><label>画像（任意）</label><input class="field" id="boardImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif"><button class="btn primary" id="boardSubmit">掲示板に投稿</button><p class="muted" id="boardStatus"></p></div><div class="sectionhead"><div><h2>投稿一覧</h2><p>投稿への返信は各投稿の下から行えます。</p></div></div><div id="boardPosts"><div class="empty">投稿を読み込み中...</div></div></section>
 <section class="page" id="page-about"><div class="sectionhead"><div><h2>使い方・サイト情報</h2><p>AevToolsを安心して使うためのガイド。</p></div></div><div class="panel"><h3>基本的な使い方</h3><ol><li>左上の三本線（☰）を押してメニューを開きます。</li><li>使いたいツールを選択します。</li><li>タスク・メモ・記録などを入力し、各ツールの保存ボタンを押します。</li><li>ホームから各ツールへすぐに移動できます。</li></ol><div class="panel" style="margin:16px 0">
 <h3>✉ メール機能の使い方</h3>
 <p class="muted">AevToolsに保存されている記録を自動で読み込み、項目ごとに集計してメール本文を作成します。各ツールの「メール」ボタンから利用できます。</p>
@@ -761,5 +764,83 @@ function supportReplyThread(card,ticketId,isAdmin){
    };
  };
 }
+
+
+/* AevTools announcements and community board */
+let aevAnnouncementEditingId=null;
+async function aevCommunitySession(){if(!supabaseClient)return null;const {data:{session}}=await supabaseClient.auth.getSession();return session||null}
+async function aevCommunityAdmin(){if(!supabaseClient)return false;try{const {data,error}=await supabaseClient.rpc('aevtools_is_admin');return !error&&data===true}catch(e){return false}}
+function aevSafeExternalUrl(value){const v=(value||'').trim();if(!v)return '';try{const u=new URL(v);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(e){return ''}}
+function aevExternalLink(label,url){const safe=aevSafeExternalUrl(url);if(!safe)return null;const a=document.createElement('a');a.className='community-link';a.href=safe;a.target='_blank';a.rel='noopener noreferrer';a.textContent=label+' ↗';return a}
+async function loadAnnouncements(){
+ const list=$('announcementsList');if(!list||!supabaseClient){if(list)list.textContent='読み込みには接続設定が必要です。';return}
+ const admin=await aevCommunityAdmin();$('announcementAdminPanel').hidden=!admin;
+ const {data,error}=await supabaseClient.from('aevtools_announcements').select('*').order('created_at',{ascending:false});
+ list.innerHTML='';
+ if(error){list.textContent='お知らせを取得できません。Supabaseのお知らせ・掲示板SQLを実行してください。';return}
+ if(!data?.length){list.innerHTML='<div class="empty">現在お知らせはありません。</div>';return}
+ data.forEach(item=>{
+  const card=document.createElement('article');card.className='panel community-post';
+  const h=document.createElement('h3');h.textContent=item.title;
+  const meta=document.createElement('div');meta.className='community-meta';meta.textContent='Aev0rnJP（管理者） · '+new Date(item.created_at).toLocaleString('ja-JP');
+  const body=document.createElement('p');body.className='community-post-body';body.textContent=item.body||'';
+  card.append(h,meta);if(item.body)card.append(body);
+  const links=document.createElement('div');const l=aevExternalLink('関連ページ',item.link_url),v=aevExternalLink('動画を見る',item.video_url);if(l)links.append(l);if(v)links.append(v);if(links.childNodes.length)card.append(links);
+  if(admin){const actions=document.createElement('div');actions.className='community-actions';const edit=document.createElement('button');edit.className='btn';edit.textContent='編集';edit.onclick=()=>{aevAnnouncementEditingId=item.id;$('announcementTitle').value=item.title;$('announcementBody').value=item.body||'';$('announcementLink').value=item.link_url||'';$('announcementVideo').value=item.video_url||'';$('announcementSave').textContent='変更を保存';$('announcementCancelEdit').hidden=false;$('announcementAdminStatus').textContent='編集中：'+item.title;window.scrollTo({top:0,behavior:'smooth'})};const del=document.createElement('button');del.className='btn';del.textContent='削除';del.onclick=async()=>{if(!confirm('このお知らせを削除しますか？'))return;const {error}=await supabaseClient.from('aevtools_announcements').delete().eq('id',item.id);if(error){toast('削除できませんでした：'+error.message);return}await loadAnnouncements();toast('お知らせを削除しました。')};actions.append(edit,del);card.append(actions)}
+  list.append(card);
+ });
+}
+function resetAnnouncementEditor(){aevAnnouncementEditingId=null;$('announcementTitle').value='';$('announcementBody').value='';$('announcementLink').value='';$('announcementVideo').value='';$('announcementSave').textContent='お知らせを投稿';$('announcementCancelEdit').hidden=true;$('announcementAdminStatus').textContent=''}
+$('announcementSave').onclick=async()=>{
+ const session=await aevCommunitySession();if(!session){$('announcementAdminStatus').textContent='管理者アカウントでログインしてください。';return}
+ if(!await aevCommunityAdmin()){$('announcementAdminStatus').textContent='管理者のみ投稿できます。';return}
+ const title=$('announcementTitle').value.trim(),body=$('announcementBody').value.trim(),link=$('announcementLink').value.trim(),video=$('announcementVideo').value.trim();
+ if(!title){$('announcementAdminStatus').textContent='タイトルを入力してください。';return}
+ if(link&&!aevSafeExternalUrl(link)||video&&!aevSafeExternalUrl(video)){$('announcementAdminStatus').textContent='URLは https:// または http:// から始まる正しいURLを入力してください。';return}
+ const payload={title,body,link_url:link||null,video_url:video||null,updated_at:new Date().toISOString()};
+ const result=aevAnnouncementEditingId?await supabaseClient.from('aevtools_announcements').update(payload).eq('id',aevAnnouncementEditingId):await supabaseClient.from('aevtools_announcements').insert({...payload,created_by:session.user.id});
+ if(result.error){$('announcementAdminStatus').textContent='保存できませんでした：'+result.error.message;return}
+ resetAnnouncementEditor();await loadAnnouncements();toast('お知らせを保存しました。')
+};
+$('announcementCancelEdit').onclick=resetAnnouncementEditor;
+$('announcementsRefresh').onclick=loadAnnouncements;
+async function loadBoard(){
+ const list=$('boardPosts');if(!list||!supabaseClient){if(list)list.textContent='読み込みには接続設定が必要です。';return}
+ const session=await aevCommunitySession(),admin=await aevCommunityAdmin();
+ const {data:posts,error}=await supabaseClient.from('aevtools_board_posts').select('id,user_id,author_name,title,body,image_url,image_path,created_at').order('created_at',{ascending:false});
+ list.innerHTML='';
+ if(error){list.textContent='掲示板を取得できません。SupabaseのSQL設定を確認してください。';return}
+ if(!posts?.length){list.innerHTML='<div class="empty">まだ投稿はありません。最初の投稿をしてみましょう。</div>';return}
+ const ids=posts.map(p=>p.id);const {data:comments,error:commentError}=await supabaseClient.from('aevtools_board_comments').select('id,post_id,user_id,author_name,body,created_at').in('post_id',ids).order('created_at',{ascending:true});
+ if(commentError){list.textContent='返信を取得できませんでした：'+commentError.message;return}
+ posts.forEach(post=>{
+  const card=document.createElement('article');card.className='panel community-post';
+  const h=document.createElement('h3');h.textContent=post.title;
+  const meta=document.createElement('div');meta.className='community-meta';meta.textContent=(post.author_name||'ユーザー')+' · '+new Date(post.created_at).toLocaleString('ja-JP');
+  const body=document.createElement('p');body.className='community-post-body';body.textContent=post.body;
+  card.append(h,meta,body);
+  if(post.image_url){const img=document.createElement('img');img.className='community-image';img.src=post.image_url;img.alt='投稿画像';img.loading='lazy';card.append(img)}
+  if(session&&(session.user.id===post.user_id||admin)){const actions=document.createElement('div');actions.className='community-actions';const del=document.createElement('button');del.className='btn';del.textContent='投稿を削除';del.onclick=async()=>{if(!confirm('この投稿を削除しますか？返信もすべて削除されます。'))return;const {error}=await supabaseClient.from('aevtools_board_posts').delete().eq('id',post.id);if(error){toast('削除できませんでした：'+error.message);return}if(post.image_path)await supabaseClient.storage.from('aev-board-images').remove([post.image_path]);await loadBoard();toast('投稿を削除しました。')};actions.append(del);card.append(actions)}
+  const divider=document.createElement('div');divider.className='sectionhead';divider.innerHTML='<div><h3>返信・会話</h3></div>';card.append(divider);
+  const thread=(comments||[]).filter(c=>c.post_id===post.id);
+  if(!thread.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='返信はまだありません。';card.append(empty)}
+  thread.forEach(c=>{const box=document.createElement('div');box.className='community-comment';const who=document.createElement('strong');who.textContent=(c.author_name||'ユーザー')+' · '+new Date(c.created_at).toLocaleString('ja-JP');const msg=document.createElement('p');msg.textContent=c.body;box.append(who,msg);if(session&&(session.user.id===c.user_id||admin)){const del=document.createElement('button');del.className='btn';del.style.marginTop='8px';del.textContent='返信を削除';del.onclick=async()=>{if(!confirm('この返信を削除しますか？'))return;const {error}=await supabaseClient.from('aevtools_board_comments').delete().eq('id',c.id);if(error){toast('削除できませんでした：'+error.message);return}await loadBoard()};box.append(del)}card.append(box)});
+  const reply=document.createElement('div');reply.className='community-reply';const input=document.createElement('textarea');input.className='field';input.rows=2;input.maxLength=2000;input.placeholder=session?'この投稿に返信する...':'返信するにはログインしてください';input.disabled=!session;const send=document.createElement('button');send.className='btn primary';send.textContent='返信';send.disabled=!session;send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.from('aevtools_board_comments').insert({post_id:post.id,user_id:session.user.id,body:message});send.disabled=false;if(error){toast('返信できませんでした：'+error.message);return}await loadBoard()};reply.append(input,send);card.append(reply);list.append(card);
+ });
+}
+$('boardSubmit').onclick=async()=>{
+ const status=$('boardStatus'),session=await aevCommunitySession();if(!session){status.textContent='投稿するにはメールアドレスでログインしてください。';return}
+ const title=$('boardTitle').value.trim(),body=$('boardBody').value.trim(),file=$('boardImage').files?.[0];if(!title||!body){status.textContent='タイトルと説明を入力してください。';return}
+ if(title.length>160||body.length>6000){status.textContent='文字数の上限を超えています。';return}
+ if(file&&(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)||file.size>5*1024*1024)){status.textContent='画像はJPEG・PNG・WebP・GIF、5MB以内にしてください。';return}
+ const button=$('boardSubmit');button.disabled=true;let imageUrl=null,imagePath=null;
+ try{
+  if(file){const ext=({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.type];imagePath=session.user.id+'/'+(crypto.randomUUID?crypto.randomUUID():uid())+'.'+ext;const {error:uploadError}=await supabaseClient.storage.from('aev-board-images').upload(imagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;imageUrl=supabaseClient.storage.from('aev-board-images').getPublicUrl(imagePath).data.publicUrl}
+  const {error}=await supabaseClient.from('aevtools_board_posts').insert({user_id:session.user.id,title,body,image_url:imageUrl,image_path:imagePath});if(error)throw error;
+  $('boardTitle').value='';$('boardBody').value='';$('boardImage').value='';status.textContent='投稿しました。';await loadBoard();
+ }catch(e){status.textContent='投稿できませんでした：'+(e.message||'設定を確認してください。')}
+ finally{button.disabled=false}
+};
+$('boardRefresh').onclick=loadBoard;
 
 </script></body></html>
