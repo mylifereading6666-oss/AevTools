@@ -170,7 +170,7 @@ function startAevPresenceHeartbeat(){
 
 let aevActiveUserId=null;
 let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null,aevCloudSavePromise=Promise.resolve();
-const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
+const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_memo_tombstones','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
 function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
 function aevSetLocal(key,value){localStorage.setItem(aevScopedKey(key),String(value));aevQueueCloudSave()}
@@ -211,12 +211,30 @@ async function aevActivateAccount(session){
    let changed=previousId!==userId,needsCloudRepair=false;
    if(row&&row.data&&row.data.storage){
     for(const key of aevAccountStorageKeys){
-     const value=row.data.storage[key],target='aev_account_'+userId+'_'+key;
-     if(value==null){
+     const value=row.data.storage[key],target='aev_account_'+userId+'_'+key,localValue=localStorage.getItem(target);
+     if(key==='aev_memos'){
+      const parseArray=v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}};
+      const localMemos=parseArray(localValue),cloudMemos=parseArray(value);
+      const tombstoneKey='aev_account_'+userId+'_aev_memo_tombstones';
+      const cloudTombstones=row.data.storage.aev_memo_tombstones;
+      let tombstones={};
+      try{tombstones={...JSON.parse(localStorage.getItem(tombstoneKey)||'{}'),...JSON.parse(cloudTombstones||'{}')}}catch{}
+      const merged=new Map();
+      const memoKey=m=>m?.id?String(m.id):'legacy:'+String(m?.title||'')+'|'+String(m?.body||'')+'|'+String(m?.tag||'');
+      for(const m of [...cloudMemos,...localMemos]){
+       const k=memoKey(m),prior=merged.get(k);
+       if(!prior||Number(m.updated||0)>=Number(prior.updated||0))merged.set(k,m);
+      }
+      const result=[...merged.entries()].filter(([k,m])=>!m?.id||Number(tombstones[String(m.id)]||0)<Number(m.updated||0)).map(([,m])=>m);
+      result.sort((a,b)=>Number(a.updated||0)-Number(b.updated||0));
+      const mergedText=JSON.stringify(result),tombstoneText=JSON.stringify(tombstones);
+      if(localValue!==mergedText){localStorage.setItem(target,mergedText);changed=true}
+      if(localStorage.getItem(tombstoneKey)!==tombstoneText){localStorage.setItem(tombstoneKey,tombstoneText);changed=true}
+      if(value!==mergedText||cloudTombstones!==tombstoneText)needsCloudRepair=true;
+     }else if(value==null){
       // A missing cloud field is not proof that local account data should be deleted.
-      // Preserve this user's scoped local copy and upload it back to the cloud.
-      if(localStorage.getItem(target)!==null)needsCloudRepair=true;
-     }else if(localStorage.getItem(target)!==value){localStorage.setItem(target,value);changed=true}
+      if(localValue!==null)needsCloudRepair=true;
+     }else if(localValue!==value){localStorage.setItem(target,value);changed=true}
     }
    }else{
     for(const key of aevAccountStorageKeys){
@@ -315,7 +333,7 @@ $('addmoney').onclick=()=>{let name=$('moneyname').value.trim(),amount=+$('money
 // Memo
 let memos=read('memos'),editingMemoId=null;
 function resetMemoEditor(){editingMemoId=null;$('memotitle').value='';$('memobody').value='';$('memotag').value='';$('savememo').textContent='メモを保存';$('cancelMemoEdit').hidden=true;$('memoEditStatus').hidden=true}
-function renderMemos(){let q=$('memosearch').value.toLowerCase(),list=$('memolist');list.innerHTML='';let items=memos.filter(m=>(m.title+' '+m.body+' '+m.tag).toLowerCase().includes(q));if(!items.length){list.innerHTML='<div class="empty">メモはありません。検索条件を変えるか、新しいメモを作成してください。</div>';return}items.slice().reverse().forEach(m=>{let d=document.createElement('div');d.className='memoitem';d.innerHTML='<div class="row"><div style="flex:1"><h4></h4><small></small></div><button class="btn fav"></button><button class="btn edit">編集</button><button class="btn del">削除</button></div><p></p>';d.querySelector('h4').textContent=m.title||'無題';d.querySelector('small').textContent=(m.tag?'#'+m.tag+' · ':'')+new Date(m.updated).toLocaleString('ja-JP');d.querySelector('p').textContent=m.body;d.querySelector('.fav').textContent=m.fav?'★':'☆';d.querySelector('.fav').onclick=()=>{m.fav=!m.fav;save('memos',memos);renderMemos()};d.querySelector('.edit').onclick=()=>{editingMemoId=m.id;$('memotitle').value=m.title||'';$('memobody').value=m.body||'';$('memotag').value=m.tag||'';$('savememo').textContent='変更を保存';$('cancelMemoEdit').hidden=false;$('memoEditStatus').hidden=false;$('memotitle').focus();document.getElementById('page-memo').scrollIntoView({behavior:'smooth',block:'start'})};d.querySelector('.del').onclick=()=>{if(!confirm('このメモを削除しますか？'))return;memos=memos.filter(x=>x.id!==m.id);if(editingMemoId===m.id)resetMemoEditor();save('memos',memos);renderMemos()};list.append(d)})}
+function renderMemos(){let q=$('memosearch').value.toLowerCase(),list=$('memolist');list.innerHTML='';let items=memos.filter(m=>(m.title+' '+m.body+' '+m.tag).toLowerCase().includes(q));if(!items.length){list.innerHTML='<div class="empty">メモはありません。検索条件を変えるか、新しいメモを作成してください。</div>';return}items.slice().reverse().forEach(m=>{let d=document.createElement('div');d.className='memoitem';d.innerHTML='<div class="row"><div style="flex:1"><h4></h4><small></small></div><button class="btn fav"></button><button class="btn edit">編集</button><button class="btn del">削除</button></div><p></p>';d.querySelector('h4').textContent=m.title||'無題';d.querySelector('small').textContent=(m.tag?'#'+m.tag+' · ':'')+new Date(m.updated).toLocaleString('ja-JP');d.querySelector('p').textContent=m.body;d.querySelector('.fav').textContent=m.fav?'★':'☆';d.querySelector('.fav').onclick=()=>{m.fav=!m.fav;m.updated=Date.now();save('memos',memos);renderMemos()};d.querySelector('.edit').onclick=()=>{editingMemoId=m.id;$('memotitle').value=m.title||'';$('memobody').value=m.body||'';$('memotag').value=m.tag||'';$('savememo').textContent='変更を保存';$('cancelMemoEdit').hidden=false;$('memoEditStatus').hidden=false;$('memotitle').focus();document.getElementById('page-memo').scrollIntoView({behavior:'smooth',block:'start'})};d.querySelector('.del').onclick=()=>{if(!confirm('このメモを削除しますか？'))return;const tombstones=read('memo_tombstones',{});tombstones[m.id]=Date.now();save('memo_tombstones',tombstones);memos=memos.filter(x=>x.id!==m.id);if(editingMemoId===m.id)resetMemoEditor();save('memos',memos);renderMemos()};list.append(d)})}
 $('savememo').onclick=()=>{let body=$('memobody').value.trim(),title=$('memotitle').value.trim();if(!body&&!title){toast('タイトルか本文を入力してください');return}if(editingMemoId){const target=memos.find(m=>m.id===editingMemoId);if(!target){toast('編集対象のメモが見つかりません');resetMemoEditor();return}target.title=title;target.body=body;target.tag=$('memotag').value.trim();target.updated=Date.now();save('memos',memos);resetMemoEditor();renderMemos();toast('メモを更新しました')}else{memos.push({id:uid(),title,body,tag:$('memotag').value.trim(),fav:false,updated:Date.now()});save('memos',memos);resetMemoEditor();renderMemos();toast('メモを保存しました')}};
 $('cancelMemoEdit').onclick=()=>{resetMemoEditor();toast('編集をキャンセルしました')};$('memosearch').oninput=renderMemos;renderMemos();
 
