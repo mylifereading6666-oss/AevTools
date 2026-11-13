@@ -223,10 +223,12 @@ begin
  select coalesce(jsonb_agg(jsonb_build_object(
    'user_id',p.user_id,'nickname',p.nickname,'joined_at',p.joined_at,
    'weight',case when v_admin then p.weight else null end,
-   'probability',case when v_admin then round(100.0*p.weight/nullif(sum(p.weight) over(),0),2) else null end
+   'probability',case when v_admin then round(100.0*p.weight/nullif(t.total_weight,0),2) else null end
  ) order by p.joined_at,p.id),'[]'::jsonb)
  into v_parts
- from public.aevtools_roulette_participants p where p.round_id=v_round.id;
+ from public.aevtools_roulette_participants p
+ cross join (select coalesce(sum(weight),0) total_weight from public.aevtools_roulette_participants where round_id=v_round.id) t
+ where p.round_id=v_round.id;
  return jsonb_build_object(
    'round',jsonb_build_object(
      'id',v_round.id,'status',v_round.status,
@@ -265,7 +267,7 @@ as $$
 declare v_uid uuid:=auth.uid(); v_round_id uuid; v_name text;
 begin
  if v_uid is null then raise exception 'login_required'; end if;
- select id into v_round_id from public.aevtools_roulette_rounds where status='open' order by created_at desc limit 1;
+ select id into v_round_id from public.aevtools_roulette_rounds where status='open' order by created_at desc limit 1 for update;
  if v_round_id is null then raise exception 'registration_closed'; end if;
  select nickname into v_name from public.aevtools_profiles where user_id=v_uid;
  if v_name is null then
@@ -503,3 +505,65 @@ revoke all on function public.aevtools_roulette_send_winner_chat_message(uuid,te
 grant execute on function public.aevtools_roulette_send_winner_chat_message(uuid,text) to authenticated;
 revoke all on function public.aevtools_roulette_delete_winner_chat(uuid) from public;
 grant execute on function public.aevtools_roulette_delete_winner_chat(uuid) to authenticated;
+
+
+-- Include public nicknames in admin support lists and direct-chat directory.
+create or replace function public.aevtools_admin_list_support_tickets()
+returns jsonb language plpgsql stable security definer
+set search_path=public
+as $$
+declare v_result jsonb;
+begin
+ if not exists(select 1 from public.aevtools_admin where user_id=auth.uid()) then raise exception 'admin_required'; end if;
+ select coalesce(jsonb_agg(jsonb_build_object(
+   'id',t.id,'user_id',t.user_id,'user_nickname',coalesce(pr.nickname,'ユーザー'),
+   'category',t.category,'subject',t.subject,'message',t.message,'status',t.status,
+   'created_at',t.created_at,'cancellation_reason',t.cancellation_reason,
+   'blacklisted',exists(select 1 from public.aevtools_support_blacklist b where b.user_id=t.user_id)
+ ) order by t.created_at desc),'[]'::jsonb)
+ into v_result
+ from (select * from public.aevtools_support_tickets where status<>'cancelled' order by created_at desc limit 100) t
+ left join public.aevtools_profiles pr on pr.user_id=t.user_id;
+ return v_result;
+end;
+$$;
+
+create or replace function public.aevtools_list_direct_chats()
+returns jsonb language plpgsql stable security definer
+set search_path=public,auth
+as $$
+declare v_uid uuid:=auth.uid(); v_admin boolean; v_result jsonb;
+begin
+ if v_uid is null then raise exception 'login_required'; end if;
+ select exists(select 1 from public.aevtools_admin where user_id=v_uid) into v_admin;
+ select coalesce(jsonb_agg(jsonb_build_object(
+   'id',c.id,'user_id',c.user_id,'user_email',u.email,
+   'user_nickname',coalesce(pr.nickname,'ユーザー'),
+   'created_at',c.created_at,'last_seen_at',p.last_seen_at,
+   'is_online',coalesce(p.last_seen_at>now()-interval '2 minutes',false),
+   'status',c.status,'closed_at',c.closed_at
+ ) order by c.created_at desc),'[]'::jsonb)
+ into v_result
+ from public.aevtools_admin_direct_chats c
+ join auth.users u on u.id=c.user_id
+ left join public.aevtools_profiles pr on pr.user_id=c.user_id
+ left join public.aevtools_support_presence p on p.user_id=c.user_id
+ where v_admin or c.user_id=v_uid;
+ return v_result;
+end;
+$$;
+
+create or replace function public.aevtools_roulette_cancel_round(p_round_id uuid)
+returns boolean language plpgsql security definer set search_path=public
+as $$
+begin
+ if auth.uid() is null or not exists(select 1 from public.aevtools_admin where user_id=auth.uid()) then raise exception 'admin_required'; end if;
+ update public.aevtools_roulette_rounds set status='cancelled'
+ where id=p_round_id and status in ('open','spinning');
+ if not found then raise exception 'round_not_active'; end if;
+ perform public.aevtools_roulette_notify();
+ return true;
+end;
+$$;
+revoke all on function public.aevtools_roulette_cancel_round(uuid) from public;
+grant execute on function public.aevtools_roulette_cancel_round(uuid) to authenticated;
