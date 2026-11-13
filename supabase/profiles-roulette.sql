@@ -198,11 +198,11 @@ revoke all on public.aevtools_roulette_participants from anon,authenticated;
 
 create or replace function public.aevtools_roulette_notify()
 returns void language plpgsql security definer set search_path=public
-as $
+as $$
 begin
  perform realtime.send(jsonb_build_object('changed',true),'roulette_changed','aev-roulette',true);
 end;
-$;
+$$;
 revoke all on function public.aevtools_roulette_notify() from public,anon,authenticated;
 
 create or replace function public.aevtools_roulette_get_state()
