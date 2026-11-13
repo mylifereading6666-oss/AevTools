@@ -471,8 +471,8 @@ async function syncAdminAchievementUnlocks(){
  try{
   const {data:{session}}=await supabaseClient.auth.getSession();
   if(!session)return false;
-  const {data,isError}=await supabaseClient.rpc('aevtools_is_admin');
-  if(isError||data!==true)return false;
+  const {data,error}=await supabaseClient.rpc('aevtools_is_admin');
+  if(error||data!==true)return false;
   const allAchievements=[
    ['secret-discoverer','シークレット発見者'],
    ['clue-home','ホームの探検家'],
