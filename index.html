@@ -169,7 +169,7 @@ function startAevPresenceHeartbeat(){
 
 let aevActiveUserId=localStorage.getItem('aev_active_account_id')||null;
 let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null;
-const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode'];
+const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
 function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
 function aevSetLocal(key,value){localStorage.setItem(aevScopedKey(key),String(value));aevQueueCloudSave()}
@@ -201,9 +201,7 @@ async function aevActivateAccount(session){
    aevCloudReady=true;await aevSaveAccountCloud();
   }
   aevCloudReady=true;
-  const syncMarker='aev_cloud_loaded_'+userId;
-  const markerValue=row?.updated_at||'initial';
-  if(changed||sessionStorage.getItem(syncMarker)!==markerValue){sessionStorage.setItem(syncMarker,markerValue);location.reload();return true}
+  if(changed){location.reload();return true}
   return false;
  }catch(e){aevCloudReady=false;aevCloudInitUser=null;console.error('AevTools account cloud load failed:',e);if(typeof toast==='function')toast('アカウントデータを読み込めませんでした。再読み込みしてください。');return false}
 }
@@ -234,6 +232,14 @@ $('hamb').onclick=()=>{const opened=$('sidebar').classList.toggle('open');$('ove
 // Local report builder; mailto opens the configured email app.
 function sendReport(subject,body){const url='mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);if(url.length>18000){toast('メール本文が長いため、記録を分けて送信してください。');return}window.location.href=url;toast('メールアプリを起動します。内容を確認して送信してください。')}
 function reportDate(){return new Date().toLocaleDateString('ja-JP')}
+// Restore per-account AevFocus preferences before initializing its controls.
+try{
+ const fs=JSON.parse(aevGetLocal('aev_focus_settings')||'null');
+ if(fs){if(fs.focusgoal!=null)$('focusgoal').value=fs.focusgoal;if(fs.focusmins!=null)$('focusmins').value=fs.focusmins;if(fs.breakmins!=null)$('breakmins').value=fs.breakmins;if(fs.timerSound!=null)$('timerSound').checked=!!fs.timerSound;if(fs.timerPopup!=null)$('timerPopup').checked=!!fs.timerPopup}
+}catch(e){}
+function saveAevFocusSettings(){aevSetLocal('aev_focus_settings',JSON.stringify({focusgoal:$('focusgoal').value,focusmins:$('focusmins').value,breakmins:$('breakmins').value,timerSound:$('timerSound').checked,timerPopup:$('timerPopup').checked}))}
+['focusgoal','focusmins','breakmins','timerSound','timerPopup'].forEach(id=>$(id).addEventListener('change',saveAevFocusSettings));
+
 // Tasks
 let tasks=read('tasks');function renderTasks(){let list=$('tasklist');list.innerHTML='';$('taskcount').textContent=tasks.length+'件（未完了 '+tasks.filter(t=>!t.done).length+'件）';if(!tasks.length){list.innerHTML='<div class="empty">タスクはまだありません。</div>';return}tasks.sort((a,b)=>Number(a.done)-Number(b.done)||(a.date||'9999').localeCompare(b.date||'9999'));tasks.forEach(t=>{let div=document.createElement('div');div.className='task'+(t.done?' done':'');div.innerHTML='<input type="checkbox" '+(t.done?'checked':'')+'><div class="tasktext"></div><span class="badge '+(t.priority==='high'?'high':'')+'">'+(t.priority==='high'?'優先高':t.priority==='low'?'優先低':'通常')+'</span><button class="btn" aria-label="削除">×</button>';div.querySelector('.tasktext').textContent=t.name;let small=document.createElement('small');small.textContent=t.date?'期限：'+t.date:'期限なし';div.querySelector('.tasktext').append(small);div.querySelector('input').onchange=()=>{t.done=div.querySelector('input').checked;save('tasks',tasks);renderTasks()};div.querySelector('button').onclick=()=>{tasks=tasks.filter(x=>x.id!==t.id);save('tasks',tasks);renderTasks()};list.append(div)})}
 $('addtask').onclick=()=>{let name=$('taskname').value.trim();if(!name){toast('タスク名を入力してください');return}tasks.push({id:uid(),name,date:$('taskdate').value,priority:$('taskpriority').value,done:false});save('tasks',tasks);$('taskname').value='';renderTasks();toast('タスクを追加しました')};$('cleardone').onclick=()=>{tasks=tasks.filter(t=>!t.done);save('tasks',tasks);renderTasks();toast('完了済みを削除しました')};renderTasks();
