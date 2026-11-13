@@ -87,7 +87,7 @@ body.menu-open{overflow:hidden!important;height:100dvh;overscroll-behavior:none;
 }
 
 
-.navgroup{border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#10121d;overflow:hidden}.navgroup summary{list-style:none;cursor:pointer;padding:11px 13px;color:#c9c7e8;font-weight:750;user-select:none}.navgroup summary::-webkit-details-marker{display:none}.navgroup summary::after{content:'＋';float:right;color:var(--muted)}.navgroup[open] summary::after{content:'−'}.navgroup .navbtn{margin:2px 0;padding:10px 12px}.profile-role{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:99px;background:#8b7cff25;color:#d4caff;font-size:12px;font-weight:700}.roulette-wheel{width:min(78vw,340px);aspect-ratio:1;border-radius:50%;border:8px solid #7865c7;box-shadow:0 0 30px #7655db55;display:grid;place-items:center;margin:18px auto;background:#25233a;position:relative}.roulette-wheel.spinning{animation:rouletteSpin 1.1s linear infinite}@keyframes rouletteSpin{to{transform:rotate(360deg)}}.roulette-wheel-center{width:28%;aspect-ratio:1;border-radius:50%;background:#111321;border:3px solid #9b88ff;display:grid;place-items:center;font-size:22px;z-index:1}.roulette-pointer{width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:26px solid #ffcf67;margin:0 auto -24px;position:relative;z-index:2}.roulette-participant{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-bottom:1px solid var(--line)}.roulette-participant:last-child{border-bottom:0}.roulette-participant input{width:86px;margin:0}.winner-chat{border:1px solid #6e5cb5;border-radius:14px;padding:14px;margin:10px 0;background:#131426}
+.navgroup{border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#10121d;overflow:hidden}.navgroup summary{list-style:none;cursor:pointer;padding:11px 13px;color:#c9c7e8;font-weight:750;user-select:none}.navgroup summary::-webkit-details-marker{display:none}.navgroup summary::after{content:'＋';float:right;color:var(--muted)}.navgroup[open] summary::after{content:'−'}.navgroup .navbtn{margin:2px 0;padding:10px 12px}.profile-role{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:99px;background:#8b7cff25;color:#d4caff;font-size:12px;font-weight:700}.roulette-wheel{width:min(78vw,340px);aspect-ratio:1;border-radius:50%;border:8px solid #7865c7;box-shadow:0 0 30px #7655db55;display:grid;place-items:center;margin:18px auto;background:#25233a;position:relative}.roulette-wheel.spinning{animation:rouletteSpin 1.1s linear infinite}.roulette-wheel.roulette-slowing{animation:none;transition:transform 2.5s cubic-bezier(.12,.72,.08,1)}@keyframes rouletteSpin{to{transform:rotate(360deg)}}.roulette-wheel-center{width:28%;aspect-ratio:1;border-radius:50%;background:#111321;border:3px solid #9b88ff;display:grid;place-items:center;font-size:22px;z-index:1}.roulette-pointer{width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:26px solid #ffcf67;margin:0 auto -24px;position:relative;z-index:2}.roulette-participant{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-bottom:1px solid var(--line)}.roulette-participant:last-child{border-bottom:0}.roulette-participant input{width:86px;margin:0}.winner-chat{border:1px solid #6e5cb5;border-radius:14px;padding:14px;margin:10px 0;background:#131426}
 /* Aev0rn secret mode */
 body.aev0rn-mode{--bg:#070611;--panel:#111020;--panel2:#19132c;--accent:#a58bff;--accent2:#6b72ff;--line:#393052;background:radial-gradient(ellipse at 15% 0,#3b176b 0,transparent 38%),radial-gradient(ellipse at 90% 20%,#172c70 0,transparent 35%),var(--bg)}
 body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-mode .hero{background:linear-gradient(125deg,#32145a,#15132b 60%,#102b55);border-color:#8b5de8;box-shadow:0 0 35px #6726a533}body.aev0rn-mode .btn.primary{background:linear-gradient(135deg,#a05cff,#4c5dff);box-shadow:0 0 16px #8d52ff33}body.aev0rn-mode .toolcard:hover{border-color:#a05cff;box-shadow:0 0 22px #6e35ff22}
@@ -809,6 +809,7 @@ let aevRouletteChannel=null;
 let aevRouletteState=null;
 let aevRouletteAnimationRound=null;
 let aevRouletteFinishTimer=null;
+let aevRouletteSlowdownTimer=null;
 let aevOpenWinnerChatId=null;
 
 async function refreshAevProfile(){
@@ -867,11 +868,24 @@ function renderRoulette(data,session){
   create.disabled=round.status==='open'||round.status==='spinning';
   $('rouletteWinner').textContent=round.status==='finished'?'🏆 当選者：'+(round.winner_nickname||'当選者'): '';$('rouletteCreateWinnerChat').disabled=!admin||round.status!=='finished'||!round.winner_user_id;
   if(round.status==='spinning'){
-   if(aevRouletteAnimationRound!==round.id){aevRouletteAnimationRound=round.id;wheel.classList.remove('spinning');void wheel.offsetWidth;wheel.classList.add('spinning')}
-   const started=round.started_at?new Date(round.started_at).getTime():Date.now(),remaining=Math.max(0,started+(round.spin_duration_seconds||10)*1000-Date.now());
+   const started=round.started_at?new Date(round.started_at).getTime():Date.now(),duration=Math.max(3,Number(round.spin_duration_seconds||10))*1000,remaining=Math.max(0,started+duration-Date.now());
+   const slowdownMs=2500;
+   if(aevRouletteAnimationRound!==round.id){
+    aevRouletteAnimationRound=round.id;
+    if(aevRouletteSlowdownTimer)clearTimeout(aevRouletteSlowdownTimer);
+    wheel.classList.remove('roulette-slowing','spinning');wheel.style.transition='none';wheel.style.transform='';void wheel.offsetWidth;wheel.classList.add('spinning');
+    const beginSlowdown=()=>{
+     if(aevRouletteAnimationRound!==round.id||!wheel.isConnected)return;
+     const matrix=getComputedStyle(wheel).transform;
+     let angle=0;
+     if(matrix&&matrix!=='none'){const values=matrix.match(/matrix\\(([^)]+)\\)/);if(values){const nums=values[1].split(',').map(Number);angle=Math.atan2(nums[1],nums[0])*180/Math.PI}}
+     wheel.classList.remove('spinning');wheel.classList.add('roulette-slowing');wheel.style.transform='rotate('+(angle+720)+'deg)';
+    };
+    aevRouletteSlowdownTimer=setTimeout(beginSlowdown,Math.max(0,remaining-slowdownMs));
+   }
    if(aevRouletteFinishTimer)clearTimeout(aevRouletteFinishTimer);
    aevRouletteFinishTimer=setTimeout(async()=>{await supabaseClient.rpc('aevtools_roulette_finish_spin',{p_round_id:round.id});await refreshRouletteState()},remaining+250);
-  }else{wheel.classList.remove('spinning');if(aevRouletteFinishTimer)clearTimeout(aevRouletteFinishTimer);if(round.status!=='spinning')aevRouletteAnimationRound=null}
+  }else{wheel.classList.remove('spinning','roulette-slowing');wheel.style.transition='';wheel.style.transform='';if(aevRouletteFinishTimer)clearTimeout(aevRouletteFinishTimer);if(aevRouletteSlowdownTimer)clearTimeout(aevRouletteSlowdownTimer);if(round.status!=='spinning')aevRouletteAnimationRound=null}
  }
  $('rouletteJoinStatus').textContent=!emailLogin?'参加にはメールアドレスでのログインが必要です。':data.my_joined?'この回の参加登録は完了しています。':round?.status==='open'?'この回は1人1回だけ参加できます。':'管理者が参加受付を開始すると参加できます。';
  $('rouletteAdminStatus').textContent=admin?'管理者のみ設定・抽選操作ができます。':'';
