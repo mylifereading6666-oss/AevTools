@@ -595,9 +595,9 @@ function renderRoulette(data){
 async function refreshRouletteState(){
  if(!supabaseClient)return;
  const {data:{session}}=await supabaseClient.auth.getSession();
- if(!session){$('rouletteStatus').textContent='ルーレットに参加するにはログインしてください。';$('rouletteJoin').disabled=true;return}
+ if(!session){$('rouletteStatus').textContent='ルーレットに参加するにはログインしてください。';$('rouletteJoin').disabled=true;$('rouletteAdminControls').hidden=true;$('rouletteWinnerChats').textContent='ログイン後に確認できます。';$('rouletteWinnerChatBox').innerHTML='';return}
  const {data,error}=await supabaseClient.rpc('aevtools_roulette_get_state');
- if(error){$('rouletteStatus').textContent='ルーレットSQLを実行すると利用できます。';return}
+ if(error){$('rouletteAdminControls').hidden=true;$('rouletteStatus').textContent='ルーレットSQLを実行すると利用できます。';return}
  renderRoulette(data);
 }
 async function refreshWinnerChats(){
