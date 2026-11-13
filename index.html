@@ -648,9 +648,9 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  const setMessage=t=>{msg.textContent=t};
  const headerStatus=$('headerAuthStatus'),headerSignup=$('headerSignup'),headerLogin=$('headerLogin'),headerAccount=$('headerAccount');
  const setHeaderAuth=(online,label)=>{if(headerStatus){headerStatus.classList.toggle('online',!!online);headerStatus.classList.toggle('offline',!online);headerStatus.lastChild.textContent=label}if(headerSignup)headerSignup.hidden=!!online;if(headerLogin)headerLogin.hidden=!!online;if(headerAccount)headerAccount.hidden=!online};
- headerSignup?.addEventListener('click',()=>{$('[data-page="account"]')?.click();$('showSignup')?.click()});
- headerLogin?.addEventListener('click',()=>{$('[data-page="account"]')?.click();$('showLogin')?.click()});
- headerAccount?.addEventListener('click',()=>{$('[data-page="account"]')?.click()});
+ headerSignup?.addEventListener('click',()=>{showPage('account');showForm('signup')});
+ headerLogin?.addEventListener('click',()=>{showPage('account');showForm('login')});
+ headerAccount?.addEventListener('click',()=>showPage('account'));
  const showForm=which=>{signup.hidden=which!=='signup';login.hidden=which!=='login';setMessage('')};
  $('showSignup').onclick=()=>showForm('signup');$('showLogin').onclick=()=>showForm('login');
  if(!window.supabase||!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){
