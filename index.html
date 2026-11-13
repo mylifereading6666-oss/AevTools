@@ -169,23 +169,34 @@ function startAevPresenceHeartbeat(){
 }
 
 let aevActiveUserId=null;
-let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null;
+let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null,aevCloudSavePromise=Promise.resolve();
 const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
 function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
 function aevSetLocal(key,value){localStorage.setItem(aevScopedKey(key),String(value));aevQueueCloudSave()}
 function aevRemoveLocal(key){localStorage.removeItem(aevScopedKey(key));aevQueueCloudSave()}
 function aevQueueCloudSave(){if(!aevCloudReady||!aevActiveUserId||!supabaseClient)return;clearTimeout(aevCloudSaveTimer);aevCloudSaveTimer=setTimeout(aevSaveAccountCloud,650)}
-async function aevSaveAccountCloud(){
- if(!aevCloudReady||!aevActiveUserId||!supabaseClient)return;
- try{
-  const storage={};aevAccountStorageKeys.forEach(k=>{const v=localStorage.getItem(aevScopedKey(k));if(v!==null)storage[k]=v});
-  const {error}=await supabaseClient.from('aevtools_user_data').upsert({user_id:aevActiveUserId,data:{version:1,storage},updated_at:new Date().toISOString()},{onConflict:'user_id'});
+async function aevSaveAccountCloud(userId=aevActiveUserId){
+ if(!aevCloudReady||!userId||!supabaseClient)return false;
+ const storage={};aevAccountStorageKeys.forEach(k=>{const v=localStorage.getItem('aev_account_'+userId+'_'+k);if(v!==null)storage[k]=v});
+ const snapshot={user_id:userId,data:{version:1,storage},updated_at:new Date().toISOString()};
+ aevCloudSavePromise=aevCloudSavePromise.catch(()=>{}).then(async()=>{
+  const {error}=await supabaseClient.from('aevtools_user_data').upsert(snapshot,{onConflict:'user_id'});
   if(error)throw error;
- }catch(e){console.warn('AevTools account cloud save failed:',e);if(typeof toast==='function')toast('クラウド保存に失敗しました。通信状態を確認してください。')}
+ });
+ try{await aevCloudSavePromise;return true}
+ catch(e){console.warn('AevTools account cloud save failed:',e);if(typeof toast==='function')toast('クラウド保存に失敗しました。通信状態を確認してください。');return false}
+}
+async function aevFlushAccountCloud(userId=aevActiveUserId){
+ if(!userId||!supabaseClient)return true;
+ if(aevCloudSaveTimer){clearTimeout(aevCloudSaveTimer);aevCloudSaveTimer=null}
+ if(aevCloudReady&&aevActiveUserId===userId)await aevSaveAccountCloud(userId);
+ else await aevCloudSavePromise.catch(()=>{});
+ return true;
 }
 async function aevActivateAccount(session){
  const userId=session?.user?.id;if(!userId||!supabaseClient)return false;
+ if(aevActiveUserId&&aevActiveUserId!==userId&&aevCloudReady)await aevFlushAccountCloud(aevActiveUserId);
  if(aevCloudInitUser===userId&&aevCloudReady)return false;
  if(aevCloudInitUser===userId&&aevCloudInitPromise)return await aevCloudInitPromise;
  aevCloudInitUser=userId;aevCloudReady=false;
@@ -618,7 +629,7 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
   try{const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;setMessage('パスワード再設定メールを送信しました。')}
   catch(e){setMessage('再設定メールを送信できませんでした：'+(e.message||''))}
  };
- logout.onclick=async()=>{const {error}=await supabaseClient.auth.signOut();if(error){setMessage('ログアウトできませんでした。');return}setMessage('ログアウトしました。');await refreshSession()};
+ logout.onclick=async()=>{logout.disabled=true;await aevFlushAccountCloud(aevActiveUserId);const {error}=await supabaseClient.auth.signOut();logout.disabled=false;if(error){setMessage('ログアウトできませんでした。');return}setMessage('ログアウトしました。');await refreshSession()};
  supabaseClient.auth.onAuthStateChange(()=>refreshSession());refreshSession();
 })();
 
