@@ -422,7 +422,9 @@ async function loadAdminDirectChats(openId){
   const b=document.createElement('button');b.className='btn';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,ch.user_nickname||'ユーザー');
   const toggle=document.createElement('button');toggle.className='btn '+(ch.status==='closed'?'primary':'');toggle.style.marginLeft='8px';toggle.textContent=ch.status==='closed'?'🔓 チャットを再開':'🔒 チャットを閉じる';
   toggle.onclick=async()=>{toggle.disabled=true;const rpc=ch.status==='closed'?'aevtools_admin_reopen_direct_chat':'aevtools_admin_close_direct_chat';const {error}=await supabaseClient.rpc(rpc,{p_chat_id:ch.id});toggle.disabled=false;if(error){toast('チャット状態を変更できませんでした：'+error.message);return}toast(ch.status==='closed'?'個別チャットを再開しました。':'個別チャットを閉じました。');await loadAdminDirectChats();};
-  card.append(h,p,b,toggle);list.append(card);
+  const deleteBtn=document.createElement('button');deleteBtn.className='btn';deleteBtn.style.marginLeft='8px';deleteBtn.style.borderColor='#d44';deleteBtn.style.color='#ff7777';deleteBtn.textContent='🗑 完全削除';
+  deleteBtn.onclick=async()=>{if(!confirm('この個別チャットを完全に削除しますか？\\nチャット内のメッセージもすべて削除され、元に戻せません。'))return;deleteBtn.disabled=true;const {error}=await supabaseClient.rpc('aevtools_admin_delete_direct_chat',{p_chat_id:ch.id});deleteBtn.disabled=false;if(error){toast('完全削除できませんでした：'+error.message);return}toast('個別チャットとメッセージを完全削除しました。');await loadAdminDirectChats();};
+  card.append(h,p,b,toggle,deleteBtn);list.append(card);
   if(openId===ch.id)renderDirectChat(card,ch.id,ch.user_email||'ユーザー');
  });
 }
