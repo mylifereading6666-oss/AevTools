@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" class="account-init-pending">
 <head>
 <meta charset="utf-8"><meta name="google-site-verification" content="oZYXhh1WKs2IziqNlmGkYH5p1fitfF-dGU2xLRr2mD4" /><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#101020">
@@ -41,6 +41,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 .secret-modal{display:none;position:fixed;inset:0;z-index:150;background:#03020bd9;backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px}.secret-modal.show{display:flex}.secret-window{width:min(680px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#171329,#0d1020);border:1px solid #6b55a8;border-radius:20px;padding:22px;box-shadow:0 0 55px #642eff35}.secret-window h2{margin:0 0 8px}.secret-window .secret-section{border:1px solid var(--line);border-radius:13px;padding:14px;margin:12px 0;background:#0b0d18}.secret-achievement{display:inline-flex;gap:8px;align-items:center;border:1px solid #9c7aff;background:#8b7cff20;color:#d9ccff;padding:7px 11px;border-radius:99px;font-size:13px}
 .achievement-list{display:grid;gap:8px;margin-top:10px}.achievement-item{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#111322}.achievement-item.locked{opacity:.45}.secret-window input{width:100%;box-sizing:border-box;margin:8px 0;padding:11px;border-radius:10px;border:1px solid #65558b;background:#090914;color:#fff}.secret-window button:disabled{opacity:.45;cursor:not-allowed}body.glitch-mode{animation:glitchbg 1.8s infinite;background:linear-gradient(120deg,#080808,#171020,#061820)!important}body.glitch-mode .topbar,body.glitch-mode .panel,body.glitch-mode .toolcard{border-color:#00f5ff!important;box-shadow:2px 0 #ff00aa,-2px 0 #00f5ff!important}body.glitch-mode h1,body.glitch-mode h2,body.glitch-mode h3{ text-shadow:2px 0 #ff00aa,-2px 0 #00f5ff}body.neon-mode{--bg:#050816;--panel:#09162b;--panel2:#0c2040;--accent:#00f5ff;--accent2:#ff36d1;--line:#1a6c91;background:radial-gradient(ellipse at 20% 0,#003c66,transparent 40%),radial-gradient(ellipse at 90% 80%,#4d0058,transparent 40%),#050816!important}body.neon-mode .btn.primary{background:linear-gradient(90deg,#00cfff,#ff36d1);box-shadow:0 0 18px #00cfff55}body.neon-mode .toolcard:hover{box-shadow:0 0 24px #00f5ff55}
 .community-link{display:inline-block;color:#bdb4ff;text-decoration:underline;overflow-wrap:anywhere;margin:5px 12px 0 0}.community-image{display:block;max-width:100%;max-height:420px;object-fit:contain;border-radius:12px;margin:12px 0;border:1px solid var(--line)}.community-comment{padding:10px 12px;margin:8px 0;border:1px solid var(--line);border-radius:11px;background:#10121d}.community-comment p{white-space:pre-wrap;margin:6px 0 0}.community-post{margin:14px 0}.community-post-body{white-space:pre-wrap;overflow-wrap:anywhere;color:#d6d7e8}.community-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.community-reply{display:flex;gap:8px;align-items:flex-start;margin-top:12px}.community-reply textarea{flex:1;min-width:0}.community-meta{font-size:12px;color:var(--muted);margin:5px 0 12px}
+html.account-init-pending body{visibility:hidden}
 </style>
 </head>
 <body>
@@ -211,6 +212,8 @@ async function aevActivateAccount(session){
     aevCloudReady=true;await aevSaveAccountCloud();
    }
    if(aevCloudInitUser!==userId)return true;
+   // Remove old shared, unscoped values after migration/restore.
+   for(const key of aevAccountStorageKeys)localStorage.removeItem(key);
    aevCloudReady=true;
    if(changed){location.reload();return true}
    return false;
@@ -586,9 +589,9 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  };
  async function refreshSession(){
   const {data:{session},error}=await supabaseClient.auth.getSession();
-  if(error){status.textContent='ログイン状態を取得できませんでした。';return}
-  if(session){if(await aevActivateAccount(session))return;startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();loadMyDirectChats();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
-  else{if(aevActiveUserId||localStorage.getItem('aev_active_account_id')){aevCloudReady=false;aevActiveUserId=null;localStorage.removeItem('aev_active_account_id');location.reload();return}if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
+  if(error){status.textContent='ログイン状態を取得できませんでした。';document.documentElement.classList.remove('account-init-pending');return}
+  if(session){if(await aevActivateAccount(session))return;document.documentElement.classList.remove('account-init-pending');startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();loadMyDirectChats();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
+  else{if(aevActiveUserId||localStorage.getItem('aev_active_account_id')){aevCloudReady=false;aevActiveUserId=null;localStorage.removeItem('aev_active_account_id');location.reload();return}if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';document.documentElement.classList.remove('account-init-pending');$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
  }
  $('signupSubmit').onclick=async()=>{
   const email=$('signupEmail').value.trim(),password=$('signupPassword').value;
