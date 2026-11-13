@@ -472,13 +472,22 @@ const secretClues=[
  {id:'focus',part:'NEON',label:'ヒント3：AevFocusに隠された文字「NEON」',title:'集中ページの探検家'}
 ];
 function readSecretList(key){try{return JSON.parse(aevGetLocal(key)||'[]')}catch{return []}}
-function saveSecretList(key,list){
- aevSetLocal(key,JSON.stringify(list));
- // 実績・ヒント・テーマの変更は待ち時間を置かず、その場でクラウド保存を開始する。
- if(aevCloudReady&&aevActiveUserId&&['aev_secret_achievements','aev_secret_clues','aev_secret_unlocks'].includes(key)){
-  return aevFlushAccountCloud(aevActiveUserId);
+async function saveSecretList(key,list){
+ const value=JSON.stringify(list);
+ aevSetLocal(key,value);
+ // ログイン・クラウド初期化が完了していない場合は「保存完了」と扱わない。
+ if(!aevActiveUserId||!aevCloudReady||!supabaseClient)return false;
+ if(!['aev_secret_achievements','aev_secret_clues','aev_secret_unlocks'].includes(key))return false;
+ const userId=aevActiveUserId;
+ const saved=await aevFlushAccountCloud(userId);
+ if(!saved||aevActiveUserId!==userId||!aevCloudReady)return false;
+ // upsertの成功応答だけでなく、クラウド上の値を読み戻して一致を確認する。
+ const {data,error}=await supabaseClient.from('aevtools_user_data').select('data').eq('user_id',userId).maybeSingle();
+ if(error||!data?.data?.storage||data.data.storage[key]!==value){
+  console.warn('Secret achievement cloud verification failed:',{key,error});
+  return false;
  }
- return Promise.resolve(true);
+ return true;
 }
 function secretCluesFound(){return readSecretList(clueStorageKey)}
 function secretUnlocks(){return readSecretList(unlockedStorageKey)}
