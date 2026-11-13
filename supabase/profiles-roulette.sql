@@ -76,6 +76,7 @@ begin
  set nickname=v_name
  from public.aevtools_roulette_rounds r
  where p.round_id=r.id and p.user_id=v_uid and r.status='open';
+ perform public.aevtools_roulette_notify();
  return public.aevtools_profile_json(v_uid);
 exception when unique_violation then
  raise exception 'nickname_taken';
@@ -585,6 +586,51 @@ begin
  into v_result
  from (select * from public.aevtools_support_tickets where status='cancelled' order by updated_at desc limit 200) t
  left join public.aevtools_profiles pr on pr.user_id=t.user_id;
+ return v_result;
+end;
+$$;
+
+
+create or replace function public.aevtools_admin_list_support_blacklist_users()
+returns jsonb language plpgsql stable security definer
+set search_path=public,auth
+as $$
+declare v_result jsonb;
+begin
+ if auth.uid() is null or not exists(select 1 from public.aevtools_admin where user_id=auth.uid()) then
+   raise exception 'admin_required';
+ end if;
+ select coalesce(jsonb_agg(jsonb_build_object(
+   'user_id',b.user_id,'email',u.email,
+   'nickname',coalesce(pr.nickname,'ユーザー'),
+   'account_created_at',u.created_at,'last_sign_in_at',u.last_sign_in_at,
+   'blacklisted_at',b.created_at,'blacklist_reason',b.reason,
+   'admin_user_id',b.admin_user_id,'admin_email',admin_user.email,
+   'tickets',coalesce((
+     select jsonb_agg(jsonb_build_object(
+       'id',t.id,'category',t.category,'subject',t.subject,'message',t.message,
+       'status',t.status,'created_at',t.created_at,'updated_at',t.updated_at,
+       'cancellation_reason',t.cancellation_reason,
+       'replies',coalesce((
+         select jsonb_agg(jsonb_build_object(
+           'sender_user_id',r.sender_user_id,'sender_email',sender.email,
+           'sender_nickname',coalesce(sender_profile.nickname,'ユーザー'),
+           'message',r.message,'created_at',r.created_at
+         ) order by r.created_at asc)
+         from public.aevtools_support_replies r
+         left join auth.users sender on sender.id=r.sender_user_id
+         left join public.aevtools_profiles sender_profile on sender_profile.user_id=r.sender_user_id
+         where r.ticket_id=t.id
+       ),'[]'::jsonb)
+     ) order by t.created_at desc)
+     from public.aevtools_support_tickets t where t.user_id=b.user_id
+   ),'[]'::jsonb)
+ ) order by b.created_at desc),'[]'::jsonb)
+ into v_result
+ from public.aevtools_support_blacklist b
+ left join auth.users u on u.id=b.user_id
+ left join public.aevtools_profiles pr on pr.user_id=b.user_id
+ left join auth.users admin_user on admin_user.id=b.admin_user_id;
  return v_result;
 end;
 $$;
