@@ -168,7 +168,7 @@ function startAevPresenceHeartbeat(){
  aevPresenceHeartbeat=setInterval(aevTouchPresence,60000);
 }
 
-let aevActiveUserId=null;
+let aevActiveUserId=localStorage.getItem('aev_active_account_id')||null;
 let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null,aevCloudSavePromise=Promise.resolve();
 const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_memo_tombstones','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
