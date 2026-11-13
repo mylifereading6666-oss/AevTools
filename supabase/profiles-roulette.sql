@@ -455,26 +455,31 @@ end;
 $$;
 
 -- Allow authenticated clients to subscribe to the public roulette state and only their own winner chat.
-drop policy if exists "AevTools roulette realtime read" on realtime.messages;
-create policy "AevTools roulette realtime read" on realtime.messages
-for select to authenticated using (
- realtime.topic()='aev-roulette'
- or (realtime.topic() like 'aev-roulette-chat:%' and exists(
-   select 1 from public.aevtools_roulette_winner_chats c
-   where c.id::text=split_part(realtime.topic(),':',2)
-   and (c.winner_user_id=auth.uid() or exists(select 1 from public.aevtools_admin a where a.user_id=auth.uid()))
- ))
-);
-drop policy if exists "AevTools roulette realtime write" on realtime.messages;
-create policy "AevTools roulette realtime write" on realtime.messages
-for insert to authenticated with check (
- realtime.topic()='aev-roulette'
- or (realtime.topic() like 'aev-roulette-chat:%' and exists(
-   select 1 from public.aevtools_roulette_winner_chats c
-   where c.id::text=split_part(realtime.topic(),':',2)
-   and (c.winner_user_id=auth.uid() or exists(select 1 from public.aevtools_admin a where a.user_id=auth.uid()))
- ))
-);
+do $$
+begin
+ if not exists(select 1 from pg_policies where schemaname='realtime' and tablename='messages' and policyname='AevTools roulette realtime read') then
+  create policy "AevTools roulette realtime read" on realtime.messages
+  for select to authenticated using (
+   realtime.topic()='aev-roulette'
+   or (realtime.topic() like 'aev-roulette-chat:%' and exists(
+    select 1 from public.aevtools_roulette_winner_chats c
+    where c.id::text=split_part(realtime.topic(),':',2)
+    and (c.winner_user_id=auth.uid() or exists(select 1 from public.aevtools_admin a where a.user_id=auth.uid()))
+   ))
+  );
+ end if;
+ if not exists(select 1 from pg_policies where schemaname='realtime' and tablename='messages' and policyname='AevTools roulette realtime write') then
+  create policy "AevTools roulette realtime write" on realtime.messages
+  for insert to authenticated with check (
+   realtime.topic()='aev-roulette'
+   or (realtime.topic() like 'aev-roulette-chat:%' and exists(
+    select 1 from public.aevtools_roulette_winner_chats c
+    where c.id::text=split_part(realtime.topic(),':',2)
+    and (c.winner_user_id=auth.uid() or exists(select 1 from public.aevtools_admin a where a.user_id=auth.uid()))
+   ))
+  );
+ end if;
+end $$;
 
 revoke all on function public.aevtools_profile_json(uuid) from public;
 grant execute on function public.aevtools_profile_json(uuid) to authenticated;
