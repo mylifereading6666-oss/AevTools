@@ -817,9 +817,9 @@ let aevRouletteState=null;
 let aevRouletteAnimationRound=null;
 let aevRouletteFinishTimer=null;
 let aevRouletteSlowdownTimer=null;
-let aevRouletteAudioCtx=null,aevRouletteTickTimer=null,aevRouletteTickIndex=0,aevRouletteTickSlowStart=null,aevRouletteTickStopTimer=null;
+let aevRouletteAudioCtx=null,aevRouletteTickTimer=null,aevRouletteTickIndex=0,aevRouletteTickSlowStart=null,aevRouletteTickSlowDuration=3000,aevRouletteTickStopTimer=null;
 function rouletteTone(freq,duration,type='square',volume=.045){try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;if(!aevRouletteAudioCtx)aevRouletteAudioCtx=new A();const c=aevRouletteAudioCtx;if(c.state==='suspended')c.resume().catch(()=>{});const o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+duration+.01)}catch(e){console.warn('Roulette sound unavailable',e)}}
-function startRouletteTick(){stopRouletteTick(false);aevRouletteTickIndex=0;aevRouletteTickSlowStart=null;rouletteTone(720,.035,'square',.025);const tick=()=>{aevRouletteTickIndex++;const p=aevRouletteTickSlowStart===null?0:Math.min(1,(performance.now()-aevRouletteTickSlowStart)/3000);rouletteTone(aevRouletteTickIndex%2?620:760,.035,'square',.025*(1-.55*p));if(p<1)aevRouletteTickTimer=setTimeout(tick,115+385*p);else aevRouletteTickTimer=null};aevRouletteTickTimer=setTimeout(tick,115)}
+function startRouletteTick(){stopRouletteTick(false);aevRouletteTickIndex=0;aevRouletteTickSlowStart=null;rouletteTone(720,.035,'square',.025);const tick=()=>{aevRouletteTickIndex++;const p=aevRouletteTickSlowStart===null?0:Math.min(1,(performance.now()-aevRouletteTickSlowStart)/aevRouletteTickSlowDuration);rouletteTone(aevRouletteTickIndex%2?620:760,.035,'square',.025*(1-.55*p));if(p<1)aevRouletteTickTimer=setTimeout(tick,115+385*p);else aevRouletteTickTimer=null};aevRouletteTickTimer=setTimeout(tick,115)}
 function stopRouletteTick(play=false){if(aevRouletteTickTimer){clearTimeout(aevRouletteTickTimer);aevRouletteTickTimer=null}if(aevRouletteTickStopTimer){clearTimeout(aevRouletteTickStopTimer);aevRouletteTickStopTimer=null}aevRouletteTickSlowStart=null;if(play){rouletteTone(980,.11,'sine',.075);setTimeout(()=>rouletteTone(1320,.16,'sine',.065),105)}}
 let aevOpenWinnerChatId=null;
 let aevRouletteCongratsRoundId=null,aevRouletteCongratsTimer=null;
@@ -898,14 +898,17 @@ function renderRoulette(data,session){
     aevRouletteAnimationRound=round.id;
     if(aevRouletteSlowdownTimer)clearTimeout(aevRouletteSlowdownTimer);
     wheel.classList.remove('roulette-slowing','spinning');wheel.style.transition='none';wheel.style.transform='';void wheel.offsetWidth;wheel.classList.add('spinning');startRouletteTick();
+    const actualSlowdownMs=Math.min(slowdownMs,Math.max(400,remaining-250));
     const beginSlowdown=()=>{
      if(aevRouletteAnimationRound!==round.id||!wheel.isConnected)return;
      const matrix=getComputedStyle(wheel).transform;
      let angle=0;
      if(matrix&&matrix!=='none'){const values=matrix.match(/matrix\\(([^)]+)\\)/);if(values){const nums=values[1].split(',').map(Number);angle=Math.atan2(nums[1],nums[0])*180/Math.PI}}
-     const slice=360/Math.max(parts.length,1);let wi=parts.findIndex(p=>p.user_id===round.winner_user_id);if(wi<0)wi=parts.findIndex(p=>p.nickname===round.winner_nickname);if(wi<0)wi=0;const center=(wi+.5)*slice,target=((360-center)%360+360)%360,current=((angle%360)+360)%360,delta=((target-current+360)%360)+1800;aevRouletteTickSlowStart=performance.now();if(aevRouletteTickStopTimer)clearTimeout(aevRouletteTickStopTimer);aevRouletteTickStopTimer=setTimeout(()=>stopRouletteTick(true),slowdownMs+40);wheel.classList.remove('spinning');wheel.classList.add('roulette-slowing');wheel.style.transform='rotate('+(angle+delta)+'deg');
+     const slice=360/Math.max(parts.length,1);let wi=parts.findIndex(p=>p.user_id===round.winner_user_id);if(wi<0)wi=parts.findIndex(p=>p.nickname===round.winner_nickname);if(wi<0)wi=0;const center=(wi+.5)*slice,target=((360-center)%360+360)%360,current=((angle%360)+360)%360,delta=((target-current+360)%360)+1800;
+     aevRouletteTickSlowDuration=actualSlowdownMs;aevRouletteTickSlowStart=performance.now();if(aevRouletteTickStopTimer)clearTimeout(aevRouletteTickStopTimer);aevRouletteTickStopTimer=setTimeout(()=>stopRouletteTick(true),actualSlowdownMs+40);
+     wheel.classList.remove('spinning');wheel.classList.add('roulette-slowing');wheel.style.transition='transform '+actualSlowdownMs+'ms cubic-bezier(.12,.72,.08,1)';void wheel.offsetWidth;wheel.style.transform='rotate('+(angle+delta)+'deg)';
     };
-    aevRouletteSlowdownTimer=setTimeout(beginSlowdown,Math.max(0,remaining-slowdownMs));
+    aevRouletteSlowdownTimer=setTimeout(beginSlowdown,Math.max(0,remaining-actualSlowdownMs));
    }
    if(aevRouletteFinishTimer)clearTimeout(aevRouletteFinishTimer);
    aevRouletteFinishTimer=setTimeout(async()=>{stopRouletteTick(false);await supabaseClient.rpc('aevtools_roulette_finish_spin',{p_round_id:round.id});await refreshRouletteState()},remaining+250);
