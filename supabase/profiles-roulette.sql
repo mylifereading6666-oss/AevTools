@@ -539,6 +539,7 @@ begin
  select coalesce(jsonb_agg(jsonb_build_object(
    'id',c.id,'user_id',c.user_id,'user_email',u.email,
    'user_nickname',coalesce(pr.nickname,'ユーザー'),
+   'admin_nickname',(select ap.nickname from public.aevtools_admin aa left join public.aevtools_profiles ap on ap.user_id=aa.user_id limit 1),
    'created_at',c.created_at,'last_seen_at',p.last_seen_at,
    'is_online',coalesce(p.last_seen_at>now()-interval '2 minutes',false),
    'status',c.status,'closed_at',c.closed_at
@@ -567,3 +568,23 @@ end;
 $$;
 revoke all on function public.aevtools_roulette_cancel_round(uuid) from public;
 grant execute on function public.aevtools_roulette_cancel_round(uuid) to authenticated;
+
+
+create or replace function public.aevtools_admin_list_cancelled_support_tickets()
+returns jsonb language plpgsql stable security definer
+set search_path=public
+as $$
+declare v_result jsonb;
+begin
+ if not exists(select 1 from public.aevtools_admin where user_id=auth.uid()) then raise exception 'admin_required'; end if;
+ select coalesce(jsonb_agg(jsonb_build_object(
+   'id',t.id,'user_id',t.user_id,'user_nickname',coalesce(pr.nickname,'ユーザー'),
+   'category',t.category,'subject',t.subject,'message',t.message,'status',t.status,
+   'created_at',t.created_at,'cancellation_reason',t.cancellation_reason
+ ) order by t.updated_at desc),'[]'::jsonb)
+ into v_result
+ from (select * from public.aevtools_support_tickets where status='cancelled' order by updated_at desc limit 200) t
+ left join public.aevtools_profiles pr on pr.user_id=t.user_id;
+ return v_result;
+end;
+$$;
