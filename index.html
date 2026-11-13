@@ -167,8 +167,8 @@ function startAevPresenceHeartbeat(){
  aevPresenceHeartbeat=setInterval(aevTouchPresence,60000);
 }
 
-let aevActiveUserId=localStorage.getItem('aev_active_account_id')||null;
-let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null;
+let aevActiveUserId=null;
+let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null;
 const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
 function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
@@ -185,25 +185,45 @@ async function aevSaveAccountCloud(){
 }
 async function aevActivateAccount(session){
  const userId=session?.user?.id;if(!userId||!supabaseClient)return false;
- if(aevCloudInitUser===userId)return false;
+ if(aevCloudInitUser===userId&&aevCloudReady)return false;
+ if(aevCloudInitUser===userId&&aevCloudInitPromise)return await aevCloudInitPromise;
  aevCloudInitUser=userId;aevCloudReady=false;
  const previousId=localStorage.getItem('aev_active_account_id');
  const legacy=previousId===null||previousId===userId?Object.fromEntries(aevAccountStorageKeys.map(k=>[k,localStorage.getItem(k)])):null;
  aevActiveUserId=userId;localStorage.setItem('aev_active_account_id',userId);
- try{
-  const {data:row,error}=await supabaseClient.from('aevtools_user_data').select('data,updated_at').eq('user_id',userId).maybeSingle();
-  if(error)throw error;
-  let changed=previousId!==userId;
-  if(row&&row.data&&row.data.storage){
-   for(const key of aevAccountStorageKeys){const value=row.data.storage[key],target=aevScopedKey(key);if(value==null){if(localStorage.getItem(target)!==null){localStorage.removeItem(target);changed=true}}else if(localStorage.getItem(target)!==value){localStorage.setItem(target,value);changed=true}}
-  }else{
-   for(const key of aevAccountStorageKeys){const value=legacy?.[key],target=aevScopedKey(key);if(value!=null)localStorage.setItem(target,value)}
-   aevCloudReady=true;await aevSaveAccountCloud();
+ aevCloudInitPromise=(async()=>{
+  try{
+   const {data:row,error}=await supabaseClient.from('aevtools_user_data').select('data,updated_at').eq('user_id',userId).maybeSingle();
+   if(error)throw error;
+   if(aevCloudInitUser!==userId)return true;
+   let changed=previousId!==userId;
+   if(row&&row.data&&row.data.storage){
+    for(const key of aevAccountStorageKeys){
+     const value=row.data.storage[key],target='aev_account_'+userId+'_'+key;
+     if(value==null){if(localStorage.getItem(target)!==null){localStorage.removeItem(target);changed=true}}
+     else if(localStorage.getItem(target)!==value){localStorage.setItem(target,value);changed=true}
+    }
+   }else{
+    for(const key of aevAccountStorageKeys){
+     const value=legacy?.[key],target='aev_account_'+userId+'_'+key;
+     if(value!=null)localStorage.setItem(target,value);
+    }
+    aevCloudReady=true;await aevSaveAccountCloud();
+   }
+   if(aevCloudInitUser!==userId)return true;
+   aevCloudReady=true;
+   if(changed){location.reload();return true}
+   return false;
+  }catch(e){
+   if(aevCloudInitUser===userId){aevCloudReady=false;aevCloudInitUser=null}
+   console.error('AevTools account cloud load failed:',e);
+   if(typeof toast==='function')toast('アカウントデータを読み込めませんでした。再読み込みしてください。');
+   return false;
+  }finally{
+   if(aevCloudInitUser===userId)aevCloudInitPromise=null;
   }
-  aevCloudReady=true;
-  if(changed){location.reload();return true}
-  return false;
- }catch(e){aevCloudReady=false;aevCloudInitUser=null;console.error('AevTools account cloud load failed:',e);if(typeof toast==='function')toast('アカウントデータを読み込めませんでした。再読み込みしてください。');return false}
+ })();
+ return await aevCloudInitPromise;
 }
 const $=id=>document.getElementById(id), read=(key,def=[])=>{try{return JSON.parse(aevGetLocal('aev_'+key))??def}catch{return def}}, save=(key,val)=>aevSetLocal('aev_'+key,JSON.stringify(val)), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window.toastT);window.toastT=setTimeout(()=>$('toast').style.display='none',2300)}
