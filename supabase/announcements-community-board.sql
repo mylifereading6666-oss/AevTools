@@ -146,6 +146,10 @@ for delete to authenticated using (
   )
 );
 
+-- RLS policies below/above check admin membership by reading this table.
+-- Authenticated users get read-only table privilege; write access remains restricted.
+grant select on public.aevtools_admin to authenticated;
+
 grant select, insert, update, delete on public.aevtools_announcements to authenticated;
 grant select on public.aevtools_announcements to anon;
 grant select, insert, update, delete on public.aevtools_board_posts to authenticated;
