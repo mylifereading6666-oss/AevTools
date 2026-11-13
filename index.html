@@ -11,6 +11,7 @@ body.menu-open{overflow:hidden!important;height:100dvh;overscroll-behavior:none;
 @media(max-width:850px){.sidebar{position:fixed;z-index:30;top:68px;bottom:0;left:0;width:270px;background:#0e101b;box-shadow:var(--shadow);transform:translateX(-105%);transition:transform .2s}.sidebar.open{transform:translateX(0);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}.overlay.show{display:block;position:fixed;inset:68px 0 0;background:#0008;z-index:25}.main{padding:20px 15px 60px}.topbar{padding:0 14px}.topright{display:none}.grid{grid-template-columns:1fr}.featurelist{grid-template-columns:1fr}.statgrid{grid-template-columns:1fr 1fr}.hero{border-radius:20px}.timer-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.timer-controls .btn{white-space:nowrap}.ytbox{align-items:flex-start}.sectionhead{align-items:flex-start;flex-direction:column}}
 @media(min-width:851px){.sidebar{position:sticky;top:68px;height:calc(100vh - 68px);overflow:auto}}
 
+.navgroup{border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#10121d;overflow:hidden}.navgroup summary{list-style:none;cursor:pointer;padding:11px 13px;color:#c9c7e8;font-weight:750;user-select:none}.navgroup summary::-webkit-details-marker{display:none}.navgroup summary::after{content:'＋';float:right;color:var(--muted)}.navgroup[open] summary::after{content:'−'}.navgroup .navbtn{margin:2px 0;padding:10px 12px}.profile-role{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:99px;background:#8b7cff25;color:#d4caff;font-size:12px;font-weight:700}.roulette-wheel{width:min(78vw,340px);aspect-ratio:1;border-radius:50%;border:8px solid #7865c7;box-shadow:0 0 30px #7655db55;display:grid;place-items:center;margin:18px auto;background:#25233a;position:relative}.roulette-wheel.spinning{animation:rouletteSpin var(--spin-duration,10s) cubic-bezier(.12,.72,.08,1) forwards}@keyframes rouletteSpin{to{transform:rotate(1800deg)}}.roulette-wheel-center{width:28%;aspect-ratio:1;border-radius:50%;background:#111321;border:3px solid #9b88ff;display:grid;place-items:center;font-size:22px;z-index:1}.roulette-pointer{width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:26px solid #ffcf67;margin:0 auto -24px;position:relative;z-index:2}.roulette-participant{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-bottom:1px solid var(--line)}.roulette-participant:last-child{border-bottom:0}.roulette-participant input{width:86px;margin:0}.winner-chat{border:1px solid #6e5cb5;border-radius:14px;padding:14px;margin:10px 0;background:#131426}
 /* Aev0rn secret mode */
 body.aev0rn-mode{--bg:#070611;--panel:#111020;--panel2:#19132c;--accent:#a58bff;--accent2:#6b72ff;--line:#393052;background:radial-gradient(ellipse at 15% 0,#3b176b 0,transparent 38%),radial-gradient(ellipse at 90% 20%,#172c70 0,transparent 35%),var(--bg)}
 body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-mode .hero{background:linear-gradient(125deg,#32145a,#15132b 60%,#102b55);border-color:#8b5de8;box-shadow:0 0 35px #6726a533}body.aev0rn-mode .btn.primary{background:linear-gradient(135deg,#a05cff,#4c5dff);box-shadow:0 0 16px #8d52ff33}body.aev0rn-mode .toolcard:hover{border-color:#a05cff;box-shadow:0 0 22px #6e35ff22}
@@ -24,14 +25,15 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <div class="overlay" id="overlay"></div>
 <div class="layout">
 <aside class="sidebar" id="sidebar"><div class="navlabel">MENU / メニュー</div>
-<button class="navbtn active" data-page="home"><span class="navicon">⌂</span>ホーム</button>
-<button class="navbtn" data-page="task"><span class="navicon">☑</span>AevTask</button>
-<button class="navbtn" data-page="tools"><span class="navicon">⚒</span>AevTools</button>
-<button class="navbtn" data-page="focus"><span class="navicon">◷</span>AevFocus</button>
-<button class="navbtn" data-page="money"><span class="navicon">￥</span>AevMoney</button>
-<button class="navbtn" data-page="memo"><span class="navicon">▤</span>AevMemo</button>
-<button class="navbtn" data-page="account"><span class="navicon">♙</span>アカウント</button><button class="navbtn" data-page="support"><span class="navicon">✉</span>サポート</button><button class="navbtn" id="adminResolvedNav" data-page="admin-resolved" hidden><span class="navicon">✅</span>解決済みリクエスト</button><button class="navbtn" id="adminCancelledNav" data-page="admin-cancelled" hidden><span class="navicon">🗂</span>キャンセル済みリクエスト</button><button class="navbtn" id="adminUsersNav" data-page="admin-users" hidden><span class="navicon">👥</span>ユーザー管理・個別チャット</button><button class="navbtn" id="adminBlacklistNav" data-page="admin-blacklist" hidden><span class="navicon">🚫</span>ブラックリスト管理</button>
-<div class="navlabel">INFORMATION</div><button class="navbtn" data-page="about"><span class="navicon">ⓘ</span>使い方・サイト情報</button>
+<details class="navgroup" open><summary>🏠 ホーム</summary><button class="navbtn active" data-page="home"><span class="navicon">⌂</span>ホーム</button></details>
+<details class="navgroup" open><summary>🧰 ツール</summary>
+<button class="navbtn" data-page="task"><span class="navicon">☑</span>AevTask</button><button class="navbtn" data-page="tools"><span class="navicon">⚒</span>AevTools</button><button class="navbtn" data-page="focus"><span class="navicon">◷</span>AevFocus</button><button class="navbtn" data-page="money"><span class="navicon">￥</span>AevMoney</button><button class="navbtn" data-page="memo"><span class="navicon">▤</span>AevMemo</button>
+</details>
+<details class="navgroup" open><summary>👤 アカウント・コミュニティ</summary><button class="navbtn" data-page="account"><span class="navicon">♙</span>アカウント</button><button class="navbtn" data-page="support"><span class="navicon">✉</span>サポート</button><button class="navbtn" data-page="roulette"><span class="navicon">🎡</span>ルーレット</button></details>
+<details class="navgroup" id="adminMenuGroup" hidden><summary>🛠 管理者・開発者</summary>
+<button class="navbtn" id="adminUsersNav" data-page="admin-users" hidden><span class="navicon">👥</span>ユーザー管理・個別チャット</button><button class="navbtn" id="adminResolvedNav" data-page="admin-resolved" hidden><span class="navicon">✅</span>解決済みリクエスト</button><button class="navbtn" id="adminCancelledNav" data-page="admin-cancelled" hidden><span class="navicon">🗂</span>キャンセル済みリクエスト</button><button class="navbtn" id="adminBlacklistNav" data-page="admin-blacklist" hidden><span class="navicon">🚫</span>ブラックリスト管理</button>
+</details>
+<details class="navgroup"><summary>ℹ️ 情報</summary><button class="navbtn" data-page="about"><span class="navicon">ⓘ</span>使い方・サイト情報</button></details>
 </aside>
 <main class="main">
 <section class="page active" id="page-home">
@@ -102,7 +104,7 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <div id="signupForm"><h3>新規アカウント登録</h3><label for="signupEmail">メールアドレス</label><input class="field" id="signupEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="signupPassword">パスワード（8文字以上）</label><input class="field" id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="パスワード"><button class="btn primary" id="signupSubmit">確認メールを送信して登録</button></div>
 <div id="loginForm" hidden><h3>ログイン</h3><p class="muted">ログイン状態はこの端末のブラウザーに保存され、次回アクセス時も維持されます。共有端末では使用後にログアウトしてください。</p><label for="loginEmail">メールアドレス</label><input class="field" id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="loginPassword">パスワード</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード"><div class="row"><button class="btn primary" id="loginSubmit">ログイン</button><button class="btn" id="resetPassword">パスワードを再設定</button></div></div>
 <button class="btn" id="logoutButton" hidden>ログアウト</button><p id="accountMessage" class="muted" aria-live="polite"></p></div></div>
-<div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
+<div class="panel" id="profilePanel" hidden style="margin-top:16px"><h3>🏷️ ニックネーム設定</h3><p class="muted">他のユーザーにも表示される名前です。1〜20文字で設定できます。</p><div id="profileRoleLabel" class="muted"></div><label for="profileNickname">ニックネーム</label><input class="field" id="profileNickname" maxlength="20" placeholder="表示したい名前"><button class="btn primary" id="saveProfileNickname">ニックネームを保存</button><p id="profileNicknameStatus" class="muted" aria-live="polite"></p></div><div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
 <div class="row"><button class="btn primary" id="runDiagnostics">ブラウザー診断を実行</button><button class="btn" id="downloadDebugReport">診断レポートを保存</button><button class="btn" id="refreshAdminTickets">サポート一覧を更新</button></div>
 <div id="diagnosticResults" class="panel" style="margin-top:12px">診断はまだ実行されていません。</div><h3>サポートリクエスト管理</h3><button class="btn" data-page="admin-cancelled">キャンセル済みリクエスト専用ページを開く</button><div id="adminSupportList" class="muted">一覧を読み込んでください。</div><p class="muted">診断はこのブラウザー内の情報のみを確認します。サーバーのログや他ユーザーの端末情報は取得しません。</p></div><div class="panel" id="adminClaimPanel" style="margin-top:16px"><h3>🔐 開発者・管理者モード</h3><p class="muted">管理者登録は永久に1アカウントのみです。ログアウトしても管理者枠は解除されません。</p><div id="adminClaimStatus" class="muted">管理者状態を確認しています…</div><div id="adminClaimForm" hidden><label for="adminClaimCode">管理者登録コード（8文字）</label><input class="field" id="adminClaimCode" maxlength="8" autocomplete="off" placeholder="8文字の大文字コード"><button class="btn primary" id="adminClaimSubmit">このアカウントを管理者に登録</button></div><p id="adminClaimMessage" class="muted" aria-live="polite"></p></div>
 <div class="panel" id="supabaseConfigPanel" style="display:none"><h3>🔌 認証サービス接続</h3><p class="muted">SupabaseのProject URLとPublishable keyをここに設定すると、登録・ログイン機能を接続できます。入力した値はこのブラウザに保存されます。Publishable key（公開用キー）のみ使用してください。Secret key / service_role keyは絶対に入力しないでください。</p><label for="supabaseProjectUrl">Project URL</label><input class="field" id="supabaseProjectUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="url"><label for="supabasePublishableKey">Publishable key（公開用）</label><input class="field" id="supabasePublishableKey" type="password" autocomplete="off" placeholder="sb_publishable_..."><div class="row"><button class="btn primary" id="saveSupabaseConfig">接続設定を保存して再接続</button><button class="btn" id="clearSupabaseConfig">設定を削除</button></div><p id="supabaseConfigMessage" class="muted" aria-live="polite"></p></div><div class="panel" style="margin-top:14px"><h3>アカウントについて</h3><p>メールアドレス登録とログインは認証サービスを利用します。認証設定が完了すると利用できます。現在のタスク・メモ等のローカル保存データを自動的にクラウドへ同期する機能は、別途データ同期の実装が必要です。</p></div></section>
@@ -114,6 +116,12 @@ body.aev0rn-mode .topbar{background:#090613ed;border-color:#6042a0}body.aev0rn-m
 <label for="supportMessage">内容</label><textarea class="field" id="supportMessage" rows="6" maxlength="4000" placeholder="発生した状況、操作、表示されたエラーなど（最大4000文字）"></textarea>
 <button class="btn primary" id="supportSubmit">サポートリクエストを送信</button><p id="supportStatus" class="muted" aria-live="polite"></p></div>
 <div class="panel"><h3>送信したリクエスト・返信</h3><button class="btn" id="supportRefresh">自分のリクエストを更新</button><div id="mySupportList" class="muted">ログイン後に確認できます。</div></div><div class="panel" style="margin-top:16px"><h3>👤 管理者からの個別チャット</h3><p class="muted">管理者が作成したチャットのみ表示されます。ユーザー側から新しい個別チャットは作成できません。</p><button class="btn" id="refreshMyDirectChats">個別チャットを更新</button><div id="myDirectChatsList"></div></div></section>
+<section class="page" id="page-roulette"><div class="sectionhead"><div><h2>🎡 AevTools ルーレット</h2><p>参加者はニックネームで登録され、全員の画面にリアルタイム反映されます。</p></div><button class="btn" id="rouletteRefresh">更新</button></div>
+<div class="panel"><div id="rouletteStatus" class="muted">ログイン後にルーレットを確認できます。</div><div class="roulette-pointer"></div><div class="roulette-wheel" id="rouletteWheel"><div class="roulette-wheel-center">🎡</div></div><div id="rouletteWinner" class="muted" style="text-align:center;font-weight:800"></div>
+<div class="row"><button class="btn primary" id="rouletteJoin" disabled>参加する</button><span id="rouletteJoinStatus" class="muted"></span></div>
+<h3>参加者 <span id="rouletteParticipantCount">0</span>人</h3><div id="rouletteParticipants" class="panel">参加者はまだいません。</div></div>
+<div class="panel" id="rouletteAdminControls" hidden style="margin-top:14px"><h3>🛠 管理者コントロール</h3><p class="muted">当選確率の調整値は管理者にだけ表示されます。重みが大きいほど当選確率が上がります。</p><label for="rouletteDuration">ルーレット回転時間（秒・3〜120）</label><input class="field" id="rouletteDuration" type="number" min="3" max="120" value="10"><div class="row"><button class="btn primary" id="rouletteCreateRound">参加受付を開始</button><button class="btn primary" id="rouletteStartSpin" disabled>ルーレットをスタート</button></div><p id="rouletteAdminStatus" class="muted"></p></div>
+<div class="panel" style="margin-top:14px"><h3>🏆 当選者チャット</h3><p class="muted">当選者と管理者だけが閲覧できます。管理者が終了・削除するとメッセージも完全削除されます。</p><div id="rouletteWinnerChats">当選者チャットはありません。</div><div id="rouletteWinnerChatBox"></div></div></section>
 <section class="page" id="page-admin-users"><div class="sectionhead"><div><h2>👥 管理者ユーザー管理・個別チャット</h2><p>管理者専用。登録ユーザーの状態を確認し、管理者から個別チャットを開始できます。</p></div><button class="btn" id="refreshAdminUsers">ユーザー一覧を更新</button></div><div class="panel"><label for="adminUserSearch">ユーザー検索（メール・ID）</label><input class="field" id="adminUserSearch" placeholder="メールアドレスやユーザーIDで検索"><div id="adminUsersList" class="muted">管理者としてログインすると表示されます。</div></div><div class="panel" style="margin-top:16px"><h3>個別チャット</h3><p class="muted">管理者が開始したチャットのみ、対象ユーザーに表示されます。</p><div id="adminDirectChatsList"></div></div></section><section class="page" id="page-admin-blacklist"><div class="sectionhead"><div><h2>🚫 ブラックリスト登録ユーザー</h2><p>管理者専用。登録ユーザー情報とサポート履歴を確認できます。</p></div><button class="btn" id="refreshBlacklistUsers">一覧を更新</button></div><div id="blacklistUsersList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-resolved"><div class="sectionhead"><div><h2>✅ 解決済みサポートリクエスト</h2><p>管理者専用ページ。解決済みのリクエストを確認・受付中に戻せます。</p></div><button class="btn" id="refreshResolvedTickets">一覧を更新</button></div><div id="resolvedSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
 <section class="page" id="page-admin-cancelled"><div class="sectionhead"><div><h2>🗂 キャンセル済みサポートリクエスト</h2><p>管理者専用ページ。キャンセル理由と内容を確認できます。</p></div><button class="btn" id="refreshCancelledTickets">一覧を更新</button></div><div id="cancelledSupportList" class="muted">管理者としてログインすると表示されます。</div></section>
@@ -332,7 +340,7 @@ function runAevDiagnostics(){
 let latestDebugReport=null;
 $('runDiagnostics').onclick=()=>{latestDebugReport=runAevDiagnostics();toast('ブラウザー診断を実行しました')};
 $('downloadDebugReport').onclick=()=>{if(!latestDebugReport)latestDebugReport=runAevDiagnostics();const blob=new Blob([JSON.stringify(latestDebugReport,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='AevTools-debug-report.json';a.click();URL.revokeObjectURL(url)};
-async function loadThreadMessages(container,ticketId){const {data,error}=await supabaseClient.rpc('aevtools_support_ticket_messages',{p_ticket_id:ticketId});if(error)return;container.innerHTML='';(data||[]).forEach(m=>{const box=document.createElement('div');box.className='memoitem';box.style.margin='0';const who=document.createElement('strong');who.textContent=((m.sender_is_admin===true||/^(管理者|admin)$/i.test(String(m.label||'')))?'Aev0rnJP（管理者）':(m.label||'ユーザー'))+' · '+new Date(m.created_at).toLocaleString('ja-JP');const body=document.createElement('p');body.textContent=m.message;box.append(who,body);container.append(box)});}
+async function loadThreadMessages(container,ticketId){const {data,error}=await supabaseClient.rpc('aevtools_support_ticket_messages',{p_ticket_id:ticketId});if(error)return;container.innerHTML='';(data||[]).forEach(m=>{const box=document.createElement('div');box.className='memoitem';box.style.margin='0';const who=document.createElement('strong');who.textContent=(m.label||'ユーザー')+(m.role_label?' '+m.role_label:'')+' · '+new Date(m.created_at).toLocaleString('ja-JP');const body=document.createElement('p');body.textContent=m.message;box.append(who,body);container.append(box)});}
 async function loadMySupportTickets(){if(!supabaseClient){$('mySupportList').textContent='認証サービスに接続できません。';return}const {data,error}=await supabaseClient.rpc('aevtools_my_support_tickets');if(error){$('mySupportList').textContent='ログイン後に確認できます。';return}const list=$('mySupportList');list.innerHTML='';if(!data||!data.length){list.textContent='送信したリクエストはありません。';return}data.forEach(t=>{const card=document.createElement('div');card.className='memoitem';const statusLabel=t.status==='cancelled'?'キャンセル済み':t.status==='resolved'?'解決済み':'受付中';const h=document.createElement('h4');h.textContent=t.subject+' · '+statusLabel;const p=document.createElement('p');p.textContent=t.category+' / '+new Date(t.created_at).toLocaleString('ja-JP');card.append(h,p);if(t.status==='cancelled'){const reason=document.createElement('p');reason.className='muted';reason.textContent='キャンセル理由：'+(t.cancellation_reason||'（理由なし）');card.append(reason)}else{const cancel=document.createElement('button');cancel.className='btn';cancel.textContent='このリクエストをキャンセル';cancel.onclick=async()=>{const reason=prompt('キャンセル理由を入力してください（10文字以上・最大1000文字）。審査は行いません。');if(reason===null)return;if(reason.trim().length<10||reason.trim().length>1000){alert('理由は10〜1000文字で入力してください。');return}cancel.disabled=true;const {error}=await supabaseClient.rpc('aevtools_cancel_support_ticket',{p_ticket_id:t.id,p_reason:reason.trim()});cancel.disabled=false;if(error){alert(error.message==='ticket_not_cancellable'?'このリクエストはキャンセルできません。':'キャンセルに失敗しました。');return}await loadMySupportTickets()};card.append(cancel)}list.append(card);if(t.status!=='cancelled')supportReplyThread(card,t.id,false)})}
 $('supportRefresh').onclick=loadMySupportTickets;
 $('supportSubmit').onclick=async()=>{if(!supabaseClient){$('supportStatus').textContent='認証サービスに接続できません。';return}const subject=$('supportSubject').value.trim(),message=$('supportMessage').value.trim(),category=$('supportCategory').value;if(!subject||!message){$('supportStatus').textContent='件名と内容を入力してください。';return}if(message.length>4000){$('supportStatus').textContent='内容は4000文字以内にしてください。';return}const {data,error}=await supabaseClient.rpc('aevtools_submit_support_ticket',{p_category:category,p_subject:subject,p_message:message});if(error){$('supportStatus').textContent=error.message==='support_blacklisted'?'このアカウントはサポートリクエストの送信が制限されています。':'送信できませんでした。ログイン状態とサポートSQL設定を確認してください。';return} $('supportStatus').textContent='送信しました。受付番号：'+String(data||'受付済み');$('supportSubject').value='';$('supportMessage').value='';await loadMySupportTickets();};
@@ -354,7 +362,7 @@ async function loadMyDirectChats(){
  const {data,error}=await supabaseClient.rpc('aevtools_list_direct_chats');
  if(error){list.textContent='個別チャット一覧を取得できませんでした。';return}
  if(!data?.length){list.textContent='管理者からの個別チャットはまだありません。';return}
- data.forEach(ch=>{const card=document.createElement('div');card.className='memoitem';const h=document.createElement('h4');h.textContent='💬 Aev0rnJP（管理者）との個別チャット';const p=document.createElement('p');p.textContent='作成日時：'+new Date(ch.created_at).toLocaleString('ja-JP');const b=document.createElement('button');b.className='btn primary';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,'Aev0rnJP（管理者）');card.append(h,p,b);list.append(card)});
+ data.forEach(ch=>{const card=document.createElement('div');card.className='memoitem';const h=document.createElement('h4');h.textContent='💬 管理者との個別チャット';const p=document.createElement('p');p.textContent='作成日時：'+new Date(ch.created_at).toLocaleString('ja-JP');const b=document.createElement('button');b.className='btn primary';b.textContent='チャットを開く';b.onclick=()=>renderDirectChat(card,ch.id,'Aev0rnJP（管理者）');card.append(h,p,b);list.append(card)});
 }
 $('refreshMyDirectChats')?.addEventListener('click',loadMyDirectChats);
 
@@ -368,11 +376,11 @@ async function loadAdminUsers(){
 function renderAdminUsers(){
  const list=$('adminUsersList');if(!list)return;list.innerHTML='';
  const q=($('adminUserSearch')?.value||'').toLowerCase();
- const rows=adminUsersCache.filter(u=>((u.email||'')+' '+u.user_id).toLowerCase().includes(q));
+ const rows=adminUsersCache.filter(u=>((u.email||'')+' '+u.user_id+' '+(u.nickname||'')).toLowerCase().includes(q));
  if(!rows.length){list.textContent='該当するユーザーはいません。';return}
  rows.forEach(u=>{
   const card=document.createElement('div');card.className='memoitem';
-  const h=document.createElement('h4');h.textContent=(u.is_online?'🟢 オンライン':'⚪ オフライン')+' · '+(u.email||'メール非公開');
+  const h=document.createElement('h4');h.textContent=(u.nickname||'ユーザー')+' · '+(u.is_online?'🟢 オンライン':'⚪ オフライン')+' · '+(u.email||'メール非公開');
   const p=document.createElement('p');p.textContent='ユーザーID：'+u.user_id+'\n登録日時：'+(u.created_at?new Date(u.created_at).toLocaleString('ja-JP'):'不明')+'\n最終アクセス：'+(u.last_seen_at?new Date(u.last_seen_at).toLocaleString('ja-JP'):'記録なし')+'\n最終ログイン：'+(u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleString('ja-JP'):'記録なし');
   const b=document.createElement('button');b.className='btn primary';b.textContent='このユーザーとの個別チャットを作成／開く';
   b.onclick=async()=>{b.disabled=true;const {data,error}=await supabaseClient.rpc('aevtools_admin_create_direct_chat',{p_user_id:u.user_id});b.disabled=false;if(error){toast('個別チャットを作成できませんでした：'+error.message);return}await loadAdminDirectChats(String(data));};
@@ -400,7 +408,7 @@ async function renderDirectChat(card,chatId,peerName){
  const box=document.createElement('div');box.className='direct-chat';box.style.marginTop='12px';card.append(box);
  const status=document.createElement('p');status.className='muted';status.textContent='個別チャット · '+peerName+' · リアルタイム接続中';box.append(status);
  const messages=document.createElement('div');box.append(messages);
- async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_is_admin?'Aev0rnJP（管理者）':'ユーザー')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\\n'+m.message;messages.append(p)})}
+ async function refresh(){const {data,error}=await supabaseClient.rpc('aevtools_get_direct_chat_messages',{p_chat_id:chatId});messages.innerHTML='';if(error){messages.textContent='メッセージを読み込めませんでした。';return}(data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_nickname|| (m.sender_is_admin?'Aev0rnJP':'ユーザー'))+(m.role_label?' '+m.role_label:'')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\\n'+m.message;messages.append(p)})}
  await refresh();
  let channel=null,retryTimer=null,retryCount=0,disposed=false;
  const connectDirectRealtime=async()=>{
@@ -456,12 +464,12 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
   const claimStatus=$('adminClaimStatus'),claimForm=$('adminClaimForm');
   if(!supabaseClient){claimStatus.textContent='認証サービスに接続できません。';claimForm.hidden=true;return}
   const {data:{session}}=await supabaseClient.auth.getSession();
-  if(!session){claimStatus.textContent='管理者状態を確認するにはログインしてください。';claimForm.hidden=true;$('adminToolsPanel').hidden=true;$('adminUsersNav').hidden=true;return}
+  if(!session){claimStatus.textContent='管理者状態を確認するにはログインしてください。';claimForm.hidden=true;$('adminToolsPanel').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;return}
   try{
    const {data,error}=await supabaseClient.rpc('aevtools_is_admin');
    if(error)throw error;
-   if(data===true){claimStatus.textContent='👑 このアカウントは永久管理者です。';claimForm.hidden=true;$('adminToolsPanel').hidden=false;$('adminCancelledNav').hidden=false;$('adminResolvedNav').hidden=false;$('adminBlacklistNav').hidden=false;$('adminUsersNav').hidden=false;loadAdminUsers();loadAdminDirectChats();loadAdminSupportTickets();loadAdminResolvedTickets();loadAdminCancelledTickets();loadAdminBlacklistUsers()}
-   else{claimStatus.textContent='このアカウントは管理者ではありません。管理者登録が未完了の場合のみ、登録コードを入力できます。';claimForm.hidden=false;$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true;$('adminUsersNav').hidden=true}
+   if(data===true){claimStatus.textContent='👑 このアカウントは永久管理者です。';claimForm.hidden=true;$('adminToolsPanel').hidden=false;$('adminCancelledNav').hidden=false;$('adminResolvedNav').hidden=false;$('adminBlacklistNav').hidden=false;$('adminUsersNav').hidden=false;$('adminMenuGroup').hidden=false;loadAdminUsers();loadAdminDirectChats();loadAdminSupportTickets();loadAdminResolvedTickets();loadAdminCancelledTickets();loadAdminBlacklistUsers()}
+   else{claimStatus.textContent='このアカウントは管理者ではありません。管理者登録が未完了の場合のみ、登録コードを入力できます。';claimForm.hidden=false;$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true}
   }catch(e){claimStatus.textContent='管理者状態を確認できません。Supabaseの管理者SQL設定が必要です。';claimForm.hidden=true}
  }
  $('adminClaimSubmit').onclick=async()=>{
@@ -482,7 +490,7 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
   const {data:{session},error}=await supabaseClient.auth.getSession();
   if(error){status.textContent='ログイン状態を取得できませんでした。';return}
   if(session){startAevPresenceHeartbeat();status.textContent='ログイン中：'+(session.user.email||'アカウント');loadMySupportTickets();loadMyDirectChats();signup.hidden=true;login.hidden=true;logout.hidden=false;$('showSignup').hidden=false;$('showLogin').hidden=true;refreshAdminStatus()}
-  else{if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
+  else{if(aevPresenceHeartbeat){clearInterval(aevPresenceHeartbeat);aevPresenceHeartbeat=null}status.textContent='ログインしていません';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;logout.hidden=true;$('showSignup').hidden=false;$('showLogin').hidden=false;showForm('signup');refreshAdminStatus()}
  }
  $('signupSubmit').onclick=async()=>{
   const email=$('signupEmail').value.trim(),password=$('signupPassword').value;
@@ -509,6 +517,127 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  logout.onclick=async()=>{const {error}=await supabaseClient.auth.signOut();if(error){setMessage('ログアウトできませんでした。');return}setMessage('ログアウトしました。');await refreshSession()};
  supabaseClient.auth.onAuthStateChange(()=>refreshSession());refreshSession();
 })();
+
+// AevTools profile and roulette client
+let aevCurrentProfile=null;
+let aevRouletteChannel=null;
+let aevRouletteState=null;
+let aevRouletteAnimationRound=null;
+let aevRouletteFinishTimer=null;
+let aevOpenWinnerChatId=null;
+
+async function refreshAevProfile(){
+ if(!supabaseClient)return;
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ const panel=$('profilePanel');
+ if(!session){if(panel)panel.hidden=true;aevCurrentProfile=null;return}
+ const {data,error}=await supabaseClient.rpc('aevtools_get_my_profile');
+ if(error){if(panel){panel.hidden=false;$('profileNicknameStatus').textContent='プロフィールSQLを実行してください。'}return}
+ aevCurrentProfile=data;
+ if(panel){panel.hidden=false;$('profileNickname').value=data.nickname||'';$('profileRoleLabel').innerHTML='';if(data.role_label){const badge=document.createElement('span');badge.className='profile-role';badge.textContent=data.role_label;$('profileRoleLabel').append(badge)}else $('profileRoleLabel').textContent='一般ユーザー';}
+}
+$('saveProfileNickname')?.addEventListener('click',async()=>{
+ const nickname=$('profileNickname').value.trim(),status=$('profileNicknameStatus');
+ if(!nickname||nickname.length>20){status.textContent='ニックネームは1〜20文字で入力してください。';return}
+ const b=$('saveProfileNickname');b.disabled=true;
+ const {data,error}=await supabaseClient.rpc('aevtools_update_my_nickname',{p_nickname:nickname});
+ b.disabled=false;
+ if(error){const map={nickname_taken:'そのニックネームは既に使われています。',nickname_reserved:'そのニックネームは使用できません。',nickname_length_invalid:'ニックネームは1〜20文字で入力してください。'};status.textContent=map[error.message]||'保存できませんでした：'+error.message;return}
+ aevCurrentProfile=data;status.textContent='ニックネームを保存しました。';await refreshRouletteState();
+});
+async function ensureRouletteRealtime(){
+ if(!supabaseClient)return;
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ if(!session){if(aevRouletteChannel){await supabaseClient.removeChannel(aevRouletteChannel);aevRouletteChannel=null}return}
+ if(aevRouletteChannel)return;
+ const channel=supabaseClient.channel('aev-roulette',{config:{private:true,broadcast:{self:false}}});
+ aevRouletteChannel=channel;
+ channel.on('broadcast',{event:'roulette_changed'},async()=>{await refreshRouletteState();if(aevOpenWinnerChatId)await loadWinnerChatMessages(aevOpenWinnerChatId)});
+ channel.subscribe(state=>{if(state==='SUBSCRIBED')refreshRouletteState();else if(state==='CHANNEL_ERROR'||state==='TIMED_OUT'||state==='CLOSED'){aevRouletteChannel=null;setTimeout(ensureRouletteRealtime,2500)}});
+}
+function rouletteColor(i,n){return 'hsl('+Math.round(i*360/Math.max(n,1))+',65%,45%)'}
+function renderRoulette(data){
+ aevRouletteState=data;const round=data.round,parts=data.participants||[],admin=data.is_admin===true;
+ $('rouletteAdminControls').hidden=!admin;
+ $('rouletteParticipantCount').textContent=parts.length;
+ $('rouletteParticipants').innerHTML='';
+ if(!parts.length)$('rouletteParticipants').textContent='参加者はまだいません。';
+ const wheel=$('rouletteWheel');
+ if(parts.length){const slice=360/parts.length;const stops=parts.map((p,i)=>rouletteColor(i,parts.length)+' '+(i*slice)+'deg '+((i+1)*slice)+'deg');wheel.style.background='conic-gradient('+stops.join(',')+')';}
+ else wheel.style.background='conic-gradient(#292b40 0deg 360deg)';
+ parts.forEach((p,i)=>{
+  const row=document.createElement('div');row.className='roulette-participant';
+  const name=document.createElement('span');name.textContent=(i+1)+'. '+p.nickname;row.append(name);
+  if(admin){const controls=document.createElement('span');controls.style.display='flex';controls.style.alignItems='center';controls.style.gap='8px';const probability=document.createElement('small');probability.textContent=(p.probability??0)+'%';const weight=document.createElement('input');weight.className='field';weight.type='number';weight.min='1';weight.max='1000';weight.value=p.weight||1;weight.setAttribute('aria-label',p.nickname+'の抽選重み');weight.onchange=async()=>{const {error}=await supabaseClient.rpc('aevtools_roulette_set_weight',{p_round_id:round.id,p_user_id:p.user_id,p_weight:Number(weight.value)});if(error){toast('確率設定を変更できませんでした：'+error.message);await refreshRouletteState()}else await refreshRouletteState()};controls.append(probability,weight);row.append(controls)}
+  $('rouletteParticipants').append(row);
+ });
+ const join=$('rouletteJoin'),start=$('rouletteStartSpin'),create=$('rouletteCreateRound');
+ if(!round){$('rouletteStatus').textContent='現在、開催中のルーレットはありません。';join.disabled=true;join.textContent='参加する';start.disabled=true;$('rouletteWinner').textContent='';}
+ else{
+  $('rouletteDuration').value=round.spin_duration_seconds||10;
+  $('rouletteStatus').textContent=round.status==='open'?'🟢 参加受付中':round.status==='spinning'?'🎡 ルーレット抽選中…':'抽選終了';
+  join.disabled=round.status!=='open'||data.my_joined;join.textContent=data.my_joined?'参加登録済み':'参加する';
+  start.disabled=!admin||round.status!=='open'||parts.length===0;
+  create.disabled=round.status==='open'||round.status==='spinning';
+  $('rouletteWinner').textContent=round.status==='finished'?'🏆 当選者：'+(round.winner_nickname||'当選者'): '';
+  if(round.status==='spinning'){
+   if(aevRouletteAnimationRound!==round.id){aevRouletteAnimationRound=round.id;wheel.classList.remove('spinning');void wheel.offsetWidth;const duration=Number(round.spin_duration_seconds||10);wheel.style.setProperty('--spin-duration',duration+'s');wheel.classList.add('spinning')}
+   const started=round.started_at?new Date(round.started_at).getTime():Date.now(),remaining=Math.max(0,started+(round.spin_duration_seconds||10)*1000-Date.now());
+   if(aevRouletteFinishTimer)clearTimeout(aevRouletteFinishTimer);
+   aevRouletteFinishTimer=setTimeout(async()=>{await supabaseClient.rpc('aevtools_roulette_finish_spin',{p_round_id:round.id});await refreshRouletteState()},remaining+250);
+  }else{wheel.classList.remove('spinning');if(aevRouletteFinishTimer)clearTimeout(aevRouletteFinishTimer);if(round.status!=='spinning')aevRouletteAnimationRound=null}
+ }
+ $('rouletteJoinStatus').textContent=data.my_joined?'この回の参加登録は完了しています。':round?.status==='open'?'この回は1人1回だけ参加できます。':'';
+ $('rouletteAdminStatus').textContent=admin?'管理者のみ設定・抽選操作ができます。':'';
+ refreshWinnerChats();
+}
+async function refreshRouletteState(){
+ if(!supabaseClient)return;
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ if(!session){$('rouletteStatus').textContent='ルーレットに参加するにはログインしてください。';$('rouletteJoin').disabled=true;return}
+ const {data,error}=await supabaseClient.rpc('aevtools_roulette_get_state');
+ if(error){$('rouletteStatus').textContent='ルーレットSQLを実行すると利用できます。';return}
+ renderRoulette(data);
+}
+async function refreshWinnerChats(){
+ const list=$('rouletteWinnerChats');if(!list||!supabaseClient)return;
+ const {data,error}=await supabaseClient.rpc('aevtools_roulette_list_winner_chats');
+ if(error){list.textContent='当選者チャットを取得できませんでした。';return}
+ list.innerHTML='';
+ if(!data?.length){list.textContent='当選者チャットはありません。';return}
+ data.forEach(c=>{
+  const card=document.createElement('div');card.className='winner-chat';
+  const h=document.createElement('strong');h.textContent='🏆 '+(c.winner_nickname||'当選者')+' のチャット';
+  const open=document.createElement('button');open.className='btn primary';open.textContent='チャットを開く';open.onclick=()=>openWinnerChat(c.id);
+  card.append(h,open);
+  if(aevRouletteState?.is_admin){const del=document.createElement('button');del.className='btn';del.style.marginLeft='8px';del.textContent='完全削除';del.onclick=async()=>{if(!confirm('このチャットと全メッセージを完全に削除します。よろしいですか？'))return;const {error}=await supabaseClient.rpc('aevtools_roulette_delete_winner_chat',{p_chat_id:c.id});if(error){toast('削除できませんでした：'+error.message);return}aevOpenWinnerChatId=null;$('rouletteWinnerChatBox').innerHTML='';await refreshWinnerChats();toast('チャットを完全削除しました。')};card.append(del)}
+  list.append(card);
+ });
+}
+async function loadWinnerChatMessages(chatId){
+ const box=$('rouletteWinnerChatBox');if(!box||aevOpenWinnerChatId!==chatId)return;
+ const {data,error}=await supabaseClient.rpc('aevtools_roulette_get_winner_chat_messages',{p_chat_id:chatId});
+ if(error){box.textContent='チャットを読み込めませんでした。';return}
+ const messages=box.querySelector('.winner-chat-messages');if(!messages)return;
+ messages.innerHTML='';
+ (data||[]).forEach(m=>{const p=document.createElement('p');p.className='memoitem';p.textContent=(m.sender_nickname||'ユーザー')+(m.role_label?' '+m.role_label:'')+' · '+new Date(m.created_at).toLocaleString('ja-JP')+'\n'+m.message;messages.append(p)});
+}
+async function openWinnerChat(chatId){
+ aevOpenWinnerChatId=chatId;const box=$('rouletteWinnerChatBox');box.innerHTML='';
+ const title=document.createElement('h4');title.textContent='💬 ルーレット当選者チャット';
+ const messages=document.createElement('div');messages.className='winner-chat-messages';
+ const input=document.createElement('textarea');input.className='field';input.rows=3;input.maxLength=4000;input.placeholder='メッセージを入力（最大4000文字）';
+ const send=document.createElement('button');send.className='btn primary';send.textContent='送信';send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.rpc('aevtools_roulette_send_winner_chat_message',{p_chat_id:chatId,p_message:message});send.disabled=false;if(error){toast('送信できませんでした：'+error.message);return}input.value='';await loadWinnerChatMessages(chatId)};
+ box.append(title,messages,input,send);await loadWinnerChatMessages(chatId);
+}
+$('rouletteRefresh')?.addEventListener('click',refreshRouletteState);
+$('rouletteJoin')?.addEventListener('click',async()=>{const b=$('rouletteJoin');b.disabled=true;const {error}=await supabaseClient.rpc('aevtools_roulette_join');if(error){toast(error.message==='already_joined'?'この回は既に参加済みです。':error.message==='registration_closed'?'参加受付は終了しています。':'参加できませんでした：'+error.message)}else toast('ルーレットに参加登録しました。');await refreshRouletteState()});
+$('rouletteCreateRound')?.addEventListener('click',async()=>{const seconds=Number($('rouletteDuration').value);const {error}=await supabaseClient.rpc('aevtools_roulette_create_round',{p_spin_duration_seconds:seconds});if(error){toast('受付を開始できませんでした：'+error.message);return}aevRouletteAnimationRound=null;toast('ルーレットの参加受付を開始しました。');await refreshRouletteState()});
+$('rouletteStartSpin')?.addEventListener('click',async()=>{const round=aevRouletteState?.round;if(!round)return;const {error}=await supabaseClient.rpc('aevtools_roulette_set_duration',{p_round_id:round.id,p_seconds:Number($('rouletteDuration').value)});if(error){toast('回転時間を設定できませんでした：'+error.message);return}const {error:startError}=await supabaseClient.rpc('aevtools_roulette_start_spin',{p_round_id:round.id});if(startError){toast('抽選を開始できませんでした：'+startError.message);return}aevRouletteAnimationRound=null;await refreshRouletteState()});
+async function initAevProfileRoulette(){
+ await refreshAevProfile();await ensureRouletteRealtime();await refreshRouletteState();
+}
+if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>{setTimeout(initAevProfileRoulette,0)});initAevProfileRoulette()}
 
 /* Realtime support chat enhancement */
 const aevSupportRealtimeChannels = new Map();
