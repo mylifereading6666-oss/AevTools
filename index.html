@@ -943,7 +943,7 @@ $('saveProfileNickname')?.addEventListener('click',async()=>{
  const {data,error}=await supabaseClient.rpc('aevtools_update_my_profile',{p_nickname:nickname,p_profile:sharedProfileInput()});
  b.disabled=false;
  if(error){const map={nickname_taken:'このネームは既に使用されています。',nickname_reserved:'このネームは使用できません。',nickname_length_invalid:'ネームは1〜20文字で入力してください。',nickname_cooldown:'ネーム変更は14日ごとです。',invalid_avatar_url:'アイコンURLはHTTPSで入力してください。',invalid_banner_url:'バナーURLはHTTPSで入力してください。'};status.textContent=map[error.message]||'保存できませんでした：'+error.message;return}
- aevCurrentProfile=data;applySharedProfile(data);status.textContent='保存しました。AevNetworkにも反映されます。';await refreshRouletteState();
+ aevCurrentProfile=data;applySharedProfile(data);await refreshAevProfile();status.textContent='保存しました。AevNetworkにも反映されます。';await refreshRouletteState();
 });
 async function ensureRouletteRealtime(){
  if(!supabaseClient)return;
