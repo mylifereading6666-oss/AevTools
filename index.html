@@ -364,7 +364,7 @@ async function aevActivateAccount(session){
    const mergeJsonList=(...values)=>{
     const items=values.flatMap(v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}});
     const byId=new Map();
-    for(const item of items)if(item&&item.id){const id=String(item.id),prior=byId.get(id);if(!prior||Number(item.updated||0)>=Number(prior.updated||0))byId.set(id,item);}
+    for(const item of items){if(!item||typeof item!=='object')continue;const id=item.id?String(item.id):'legacy:'+String(item.title||'')+'|'+String(item.body||'')+'|'+String(item.tag||'');const prior=byId.get(id);if(!prior||Number(item.updated||0)>=Number(prior.updated||0))byId.set(id,item);}
     return JSON.stringify([...byId.values()]);
    };
    if(snapshotStorage.aev_memos||currentStorage.aev_memos)cloudStorage.aev_memos=mergeJsonList(snapshotStorage.aev_memos,currentStorage.aev_memos);
