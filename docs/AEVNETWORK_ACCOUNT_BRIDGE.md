@@ -29,6 +29,7 @@ POST JSON to `https://vuqbbwdojwmtehgsyfaq.supabase.co/functions/v1/aevnetwork-a
 
 - `{ "action": "login", "email": "...", "password": "..." }` returns a
   Supabase Auth session for an existing AevTools account.
+- `{ "action": "refresh", "refresh_token": "..." }` renews an expired session.
 - `{ "action": "get_data" }` with `Authorization: Bearer <access_token>`
   returns only the signed-in user's AevNetwork data.
 - `{ "action": "save_data", "data": { ... } }` with the same bearer token
