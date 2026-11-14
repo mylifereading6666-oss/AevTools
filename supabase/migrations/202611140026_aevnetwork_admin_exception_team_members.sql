@@ -74,6 +74,7 @@ declare
   v_audit_id uuid;
   v_existing public.aevnetwork_team_members%rowtype;
   v_team public.aevnetwork_teams%rowtype;
+  v_has_existing boolean := false;
 begin
   if p_admin_user_id is null or not exists (
     select 1 from public.aevtools_admin where user_id = p_admin_user_id
@@ -116,7 +117,8 @@ begin
   where team_id = p_team_id and user_id = p_target_user_id
   for update;
 
-  if found and v_existing.status = 'approved' then
+  v_has_existing := found;
+  if v_has_existing and v_existing.status = 'approved' then
     raise exception 'already_team_member';
   end if;
 
@@ -128,7 +130,7 @@ begin
 
   perform set_config('aevnetwork.admin_add_audit_id', v_audit_id::text, true);
 
-  if found then
+  if v_has_existing then
     update public.aevnetwork_team_members
       set role = 'member', status = 'approved', reviewed_at = now()
       where id = v_existing.id;
