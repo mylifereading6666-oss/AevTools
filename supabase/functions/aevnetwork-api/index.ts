@@ -214,7 +214,7 @@ Deno.serve(async (req: Request) => {
     const { data: adminFlag, error: adminFlagError } = await userClient.rpc("aevtools_is_admin");
     const isAdmin = !adminFlagError && adminFlag === true;
     const { data: assignedTestHelper, error: testHelperLookupError } = await adminClient
-      .from("aevtools_test_helper_assignment").select("user_id").eq("singleton", true).maybeSingle();
+      .from("aevtools_test_helper_assignment").select("user_id,code_hash,assigned_by,assigned_at").eq("singleton", true).maybeSingle();
     if (testHelperLookupError) return respond(500, { error: "test_helper_lookup_failed" });
     const isTestHelper = !isAdmin && assignedTestHelper?.user_id === userId;
     if (isAdmin) {
@@ -231,23 +231,43 @@ Deno.serve(async (req: Request) => {
     if (action === "admin_test_helper_get") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
       const helper = assignedTestHelper?.user_id ? await adminClient.auth.admin.getUserById(assignedTestHelper.user_id) : null;
-      return respond(200, { assigned: !!assignedTestHelper?.user_id, user: helper?.data?.user ? {
-        id: helper.data.user.id, email: helper.data.user.email ?? ""
-      } : null });
+      return respond(200, {
+        assigned: !!assignedTestHelper?.user_id,
+        code_ready: !!assignedTestHelper && !assignedTestHelper.user_id && !!assignedTestHelper.code_hash,
+        user: helper?.data?.user ? { id: helper.data.user.id, email: helper.data.user.email ?? "" } : null
+      });
     }
 
-    if (action === "admin_test_helper_assign") {
+    if (action === "admin_test_helper_generate_code") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
-      if (assignedTestHelper?.user_id) return respond(409, { error: "test_helper_already_assigned" });
-      const targetId = String(body?.user_id ?? "").trim();
-      if (!targetId || targetId === userId) return respond(400, { error: "invalid_test_helper_user" });
-      const target = await adminClient.auth.admin.getUserById(targetId);
-      if (target.error || !target.data.user) return respond(404, { error: "test_helper_user_not_found" });
+      if (assignedTestHelper) return respond(409, { error: assignedTestHelper.user_id ? "test_helper_already_assigned" : "test_helper_code_already_generated" });
+      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      const code = Array.from(bytes, (b) => alphabet[b & 31]).join("");
+      const codeHash = await hashTeamInvite(code);
       const { error } = await adminClient.from("aevtools_test_helper_assignment").insert({
-        singleton: true, user_id: targetId, assigned_by: userId
+        singleton: true, user_id: null, assigned_by: userId, assigned_at: null, code_hash: codeHash
       });
-      if (error) return respond(409, { error: "test_helper_assignment_failed" });
-      return respond(200, { assigned: true, user: { id: targetId, email: target.data.user.email ?? "" } });
+      if (error) return respond(409, { error: "test_helper_code_generation_failed" });
+      return respond(200, { generated: true, code });
+    }
+
+    if (action === "test_helper_claim_code") {
+      if (isAdmin) return respond(403, { error: "admin_cannot_be_test_helper" });
+      if (isTestHelper) return respond(409, { error: "test_helper_already_claimed" });
+      const code = String(body?.code ?? "").replace(/\\s/g, "").toUpperCase();
+      if (!/^[A-HJ-NP-Z2-9]{16}$/.test(code)) return respond(400, { error: "invalid_test_helper_code" });
+      const codeHash = await hashTeamInvite(code);
+      if (!assignedTestHelper || assignedTestHelper.user_id || assignedTestHelper.code_hash !== codeHash) {
+        return respond(409, { error: "test_helper_code_invalid_or_used" });
+      }
+      const { data: claimed, error } = await adminClient.from("aevtools_test_helper_assignment")
+        .update({ user_id: userId, assigned_at: new Date().toISOString() })
+        .eq("singleton", true).is("user_id", null).eq("code_hash", codeHash)
+        .select("user_id").maybeSingle();
+      if (error || !claimed) return respond(409, { error: "test_helper_code_invalid_or_used" });
+      return respond(200, { claimed: true, is_test_helper: true });
     }
 
     if (action === "service_set_maintenance") {
