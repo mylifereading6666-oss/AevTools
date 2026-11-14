@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
     if (action === "public_list_content") {
       const kind = String(body?.kind ?? "");
       const publicTables: Record<string, string> = {
-        announcements: "aevnetwork_announcements",
+        announcements: "aevtools_announcements",
         news: "aevnetwork_news",
         updates: "aevnetwork_updates"
       };
@@ -312,7 +312,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const contentTables: Record<string, string> = {
-      announcements: "aevnetwork_announcements",
+      announcements: "aevtools_announcements",
       news: "aevnetwork_news",
       updates: "aevnetwork_updates"
     };
@@ -345,6 +345,11 @@ Deno.serve(async (req: Request) => {
         return respond(400, { error: "invalid_content" });
       if (kind === "news") record.category = String(item.category ?? "GAMING").trim().slice(0, 40) || "GAMING";
       if (kind !== "announcements") record.published = item.published !== false;
+      if (kind === "announcements") {
+        const video = String(item.video_url ?? "").trim();
+        if (video && !/^https?:\/\//i.test(video)) return respond(400, { error: "invalid_video_url" });
+        record.video_url = video || null;
+      }
       if (kind === "announcements" || kind === "news") {
         const link = String(item.link_url ?? "").trim();
         if (link && !/^https:\/\//i.test(link)) return respond(400, { error: "invalid_link" });
