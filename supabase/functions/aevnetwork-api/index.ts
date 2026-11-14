@@ -177,8 +177,11 @@ Deno.serve(async (req: Request) => {
       const table = type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
       const id = String(body?.id ?? "");
       if (!id) return respond(400, { error: "invalid_community_target" });
-      const { data: target, error: targetError } = await adminClient.from(table)
-        .select("id,author_id,image_path").eq("id", id).is("deleted_at", null).maybeSingle();
+      const targetQuery = type === "post"
+        ? adminClient.from(table).select("id,author_id,image_path")
+        : adminClient.from(table).select("id,author_id");
+      const { data: target, error: targetError } = await targetQuery
+        .eq("id", id).is("deleted_at", null).maybeSingle();
       if (targetError || !target) return respond(404, { error: "community_target_not_found" });
       if (target.author_id !== userId && !isAdmin) return respond(403, { error: "owner_or_admin_required" });
       const reason = isAdmin && target.author_id !== userId ? String(body?.reason ?? "管理者によるモデレーション").trim().slice(0,500) : null;
