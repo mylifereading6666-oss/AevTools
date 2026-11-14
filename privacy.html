@@ -1,48 +1,25 @@
 <!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101020">
-<title>プライバシーポリシー｜AevTools</title>
-<style>
-:root{color-scheme:dark;--bg:#0b0c14;--panel:#141624;--text:#f3f4ff;--muted:#b4b7cf;--line:#292b40;--accent:#a58bff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top right,#25204c 0,transparent 35%),var(--bg);color:var(--text);font:16px/1.8 system-ui,-apple-system,"Noto Sans JP",sans-serif}.wrap{max-width:850px;margin:auto;padding:28px 18px 60px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,5vw,36px)}h1{font-size:clamp(27px,5vw,38px);line-height:1.3}h2{margin-top:30px;font-size:20px;color:#c9bdff}p,li{color:var(--muted)}a{color:#bdb0ff;overflow-wrap:anywhere}.date{color:#9296b4;font-size:14px}.back{display:inline-block;margin-bottom:16px;text-decoration:none;border:1px solid var(--line);padding:8px 13px;border-radius:10px}
-</style>
-</head>
-<body><main class="wrap"><a class="back" href="./">← AevToolsへ戻る</a><article class="panel">
-<h1>AevTools プライバシーポリシー</h1>
-<p class="date">制定日：2026年11月7日</p>
-<p>AevTools（以下「本サービス」）は、利用者の情報を適切に取り扱うため、以下の方針を定めます。</p>
-<h2>1. 本サービスについて</h2>
-<p>本サービスはGitHub Pages上で提供されるウェブツール集です。タスク、タイマー、メモ、収支などの機能に加え、Supabaseによるアカウント認証や、任意のYouTubeサポーター実績確認機能を提供します。</p>
-<h2>2. 保存する情報</h2>
-<ul>
-<li><strong>ブラウザ内のデータ：</strong>タスク、メモ、タイマー記録、設定、実績などの一部は、利用者のブラウザのlocalStorage等に保存されます。端末やブラウザのデータを消去すると、これらが失われる場合があります。</li>
-<li><strong>アカウント情報：</strong>登録・ログインを利用する場合、メールアドレスや認証関連情報は認証サービスSupabaseにより処理されます。パスワードはSupabaseの認証機能で管理され、本サービスが平文で保存するものではありません。</li>
-<li><strong>プロフィール情報：</strong>ニックネームはSupabaseに保存され、ルーレット参加者一覧、サポート会話、個別チャットなど、他の利用者に表示される場合があります。</li>
-<li><strong>ルーレット機能：</strong>参加した場合、アカウントID、ニックネーム、参加日時、抽選結果がSupabaseに保存されます。参加者一覧と抽選中の状態はログイン中の利用者にリアルタイム表示されます。当選確率の調整値は管理者のみが閲覧できます。</li>
-<li><strong>当選者チャット：</strong>当選者と管理者の間で送受信したメッセージがSupabaseに保存されます。管理者がチャットを完全削除すると、チャットとメッセージも削除されます。</li>
-<li><strong>サポート機能：</strong>サポートリクエスト等を利用した場合、入力内容や処理状況がSupabaseのデータベースに保存されることがあります。</li>
-<li><strong>YouTube実績確認：</strong>利用者が任意でGoogle認証を行うと、YouTubeチャンネル登録状態の確認に必要なGoogleアカウントの認可情報が、その処理中に利用されます。Google OAuthクライアントIDとYouTube APIキーはサイトの公開コードから読み込まれます。APIキーにはGoogle Cloud側でHTTPリファラーおよびYouTube Data API v3の制限を設定します。Googleのアクセストークン等の認証情報を他人と共有しないでください。</li>
-</ul>
-<h2>3. 外部サービス</h2>
-<p>本サービスは、GitHub Pages（ウェブサイト配信）、Supabase（認証・データベース）、Google OAuthおよびYouTube Data API（任意の登録状態確認）、Google Identity Services等の外部サービスを利用します。各サービスによる情報の取り扱いは、それぞれの提供者のプライバシーポリシーや規約にも従います。</p>
-<ul>
-<li><a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank" rel="noopener">GitHub プライバシー声明</a></li>
-<li><a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase プライバシーポリシー</a></li>
-<li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google プライバシーポリシー</a></li>
-</ul>
-<h2>4. 利用目的</h2>
-<p>情報は、サービスの提供、アカウント認証、サポート対応、設定や記録の保存、YouTube実績の確認、不正利用の防止およびサービスの維持のために利用します。</p>
-<h2>5. 第三者提供</h2>
-<p>法令に基づく場合を除き、利用者の情報を販売しません。サービスの提供に必要な範囲で、上記外部サービス事業者に情報が処理されることがあります。</p>
-<h2>6. 利用者による管理・削除</h2>
-<p>ブラウザに保存されたデータは、ブラウザのサイトデータ削除や本サービス内の各機能から管理できます。アカウント情報やサポートデータの削除を希望する場合は、GitHubリポジトリの連絡窓口からお問い合わせください。外部サービスに保存された情報は、各サービスの手続きが必要となる場合があります。</p>
-<h2>7. 未成年者の利用</h2>
-<p>未成年者が本サービスを利用する場合は、保護者の方と相談したうえで利用してください。GoogleやSupabaseなど外部サービスの年齢条件・利用規約も確認してください。</p>
-<h2>8. ポリシーの変更</h2>
-<p>機能や法令の変更に応じて、本ポリシーを更新することがあります。変更後の内容はこのページに掲載します。</p>
-<h2>9. お問い合わせ</h2>
-<p>本ポリシーや情報の取り扱いについては、<a href="https://github.com/mylifereading6666-oss/AevTools" target="_blank" rel="noopener">AevToolsのGitHubリポジトリ</a>からお問い合わせください。</p>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090b16"><meta name="description" content="AevToolsの個人情報、アカウント、プロフィール、外部サービスの取扱い">
+<title>プライバシーポリシー｜AevTools</title><style>:root{color-scheme:dark;--bg:#090b16;--panel:#14182a;--text:#f2f4ff;--muted:#b6bdd2;--line:#303752;--accent:#a99cff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top right,#24204a 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.85 system-ui,-apple-system,"Noto Sans JP",sans-serif}.wrap{width:min(920px,calc(100% - 28px));margin:auto;padding:26px 0 56px}.panel{padding:clamp(18px,4vw,34px);background:var(--panel);border:1px solid var(--line);border-radius:18px}h1{font-size:clamp(27px,5vw,38px);line-height:1.25;margin:12px 0}h2{font-size:20px;margin:30px 0 8px;color:#c9c0ff}h3{font-size:17px;margin:20px 0 6px}p,li{color:var(--muted)}a{color:var(--accent);overflow-wrap:anywhere}.back,.pill{display:inline-block;padding:8px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;margin-bottom:14px}.date{font-size:13px;color:#929bb8}.note{padding:12px 14px;border:1px solid #655ca0;border-radius:12px;background:#25213e;color:#e0dcff}.toc{display:flex;flex-wrap:wrap;gap:8px}.toc a{padding:7px 10px;border:1px solid var(--line);border-radius:9px;text-decoration:none;font-size:13px}code{overflow-wrap:anywhere}</style></head><body>
+<main class="wrap"><a class="back" href="./">← AevToolsへ戻る</a><article class="panel">
+<h1>AevTools プライバシーポリシー</h1><p class="date">最終更新日：2026年11月14日</p>
+<p>本ポリシーは、Aev0rnJP運営が提供するAevToolsにおける利用者情報の取扱いを説明します。AevToolsとAevNetworkは共通の認証・プロフィール基盤の一部を共有します。利用する機能に応じて、情報の保存先・共有範囲が異なります。</p>
+<h2>1. 取り扱う情報</h2><ul>
+<li><b>アカウント・認証情報：</b>認証サービスが管理するメールアドレス、ユーザー識別子、認証状態等。パスワードは認証基盤側で管理され、運営者が平文で閲覧するものではありません。</li>
+<li><b>プロフィール：</b>ニックネーム、自己紹介、好きなゲーム、プレイスタイル、アイコン・バナー画像URL、色・テーマ等、利用者が入力した情報。</li>
+<li><b>投稿・交流情報：</b>掲示板投稿、コメント、フレンド申請、チーム・招待・参加申請、チャット、サポート依頼と返信、報告・削除理由等、利用した機能で送信される情報。</li>
+<li><b>ツール・利用データ：</b>タスク、メモ、集中・学習記録、収支記録、設定、エクスポート等。機能によって端末内またはオンラインに保存されます。</li>
+<li><b>画像・ファイル：</b>利用者がアップロードしたプロフィール画像、掲示板画像等。公開機能にアップロードされた画像は公開URLで閲覧可能になる場合があります。</li>
+<li><b>技術・診断情報：</b>ブラウザ、端末、アクセス、エラー、セキュリティ・診断に関する情報。GitHub PagesやSupabase等の提供者がサービス提供上必要な範囲で処理する場合があります。</li>
+<li><b>外部認証情報：</b>Google／YouTube連携を利用者が明示的に開始した場合、認証と要求されたAPI機能の実行に必要な情報。</li></ul>
+<h2>2. 利用目的</h2><ul><li>アカウント認証、共通プロフィールの保存・表示・同期</li><li>ツール、投稿、コミュニティ、チーム、サポート等の機能提供</li><li>問い合わせ・報告への対応、重要なお知らせの配信</li><li>不正利用、迷惑行為、権利侵害、セキュリティ事故の調査・防止</li><li>障害対応、品質改善、機能の保守・開発</li><li>利用者が明示的に要求した外部連携の実行</li></ul>
+<h2>3. 保存先・外部サービス</h2><p>ウェブサイト配信にはGitHub Pages、認証・データベース・画像ストレージ等にはSupabaseを利用します。Google／YouTube連携を利用した場合はGoogleの認証・API基盤を利用します。機能によってはブラウザ内ストレージや外部CDNのライブラリを利用します。各提供者による情報処理は、それぞれのプライバシーポリシー・利用条件に従います。</p>
+<ul><li><a href="https://github.com/site/privacy">GitHub プライバシー情報</a></li><li><a href="https://supabase.com/privacy">Supabase プライバシーポリシー</a></li><li><a href="https://policies.google.com/privacy">Google プライバシーポリシー</a></li></ul>
+<h2>4. 公開範囲</h2><p>公開プロフィール、プロフィール画像、掲示板投稿、コメント、お知らせ等は、機能の仕様によりログインしていない訪問者にも表示される場合があります。公開を望まない情報、住所・電話番号・学校名・個人メールアドレス・位置情報・パスワード・認証トークン等を入力・投稿しないでください。公開画像はURLを知る第三者が閲覧できる場合があります。</p>
+<h2>5. 第三者提供・外部送信</h2><p>運営者は利用者情報を販売しません。サービス提供に必要な範囲で、Supabase、GitHub、Google等の外部提供者に情報が送信・処理される場合があります。法令に基づく場合、生命・身体・財産の保護に必要な場合、不正行為・セキュリティ事故への対応等、正当な理由がある場合を除き、本人の同意なく目的外で第三者に提供しません。</p>
+<h2>6. 保存期間・削除・開示等の相談</h2><p>情報は、機能提供、問い合わせ対応、安全管理、法令遵守に必要な期間保存し、不要となった情報は合理的な範囲で削除または利用停止します。ブラウザ内データはブラウザのサイトデータ削除等で失われる場合があります。アカウント・オンラインデータに関する相談は公式GitHub窓口へ連絡してください。本人確認や対象データの特定をお願いする場合があります。法令・監査・不正防止・バックアップの都合で直ちに完全削除できない場合があります。</p>
+<h2>7. 安全管理</h2><p>認証、アクセス制御、通信保護等、合理的な安全対策を行います。ただし、インターネットや外部サービスに絶対的な安全を保証するものではありません。認証情報を共有せず、共用端末ではログアウトしてください。</p>
+<h2>8. 未成年者の利用</h2><p>未成年者は、必要に応じて保護者と相談して利用してください。個人を特定できる情報を公開せず、外部サービスの年齢条件・利用規約も確認してください。</p>
+<h2>9. 改定・お問い合わせ</h2><p>機能・外部サービス・法令等の変更に応じて本ポリシーを改定し、このページに掲載します。お問い合わせは<a href="https://github.com/mylifereading6666-oss/AevTools">AevTools公式GitHubリポジトリ</a>からお願いします。公開Issueに個人情報・認証情報を書き込まないでください。</p>
 </article></main></body></html>
