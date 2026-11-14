@@ -106,7 +106,7 @@ html.account-init-pending body{visibility:hidden}
 </head>
 <body>
 <div class="app">
-<header class="topbar"><button class="hamb" id="hamb" aria-label="メニューを開く">☰</button><a class="brand" href="#" data-page="home"><span class="logo">A</span>AevTools</a><button class="btn primary manual-save-btn" id="manualSaveButton" hidden title="現在のアカウントのデータをクラウドへ今すぐ保存">☁️ 今すぐ保存</button><div class="header-account"><span class="header-status" id="headerAuthStatus"><i></i>状態を確認中</span><button class="header-auth-btn signup" id="headerSignup">新規登録</button><button class="header-auth-btn" id="headerLogin">ログイン</button><button class="header-auth-btn" id="headerAccount" hidden>アカウント</button></div></header>
+<header class="topbar"><button class="hamb" id="hamb" aria-label="メニューを開く">☰</button><a class="brand" href="#" data-page="home"><span class="logo">A</span>AevTools</a><a class="header-auth-btn" href="https://mylifereading6666-oss.github.io/AevNetwork/">AevNetwork ↗</a><button class="btn primary manual-save-btn" id="manualSaveButton" hidden title="現在のアカウントのデータをクラウドへ今すぐ保存">☁️ 今すぐ保存</button><div class="header-account"><span class="header-status" id="headerAuthStatus"><i></i>状態を確認中</span><button class="header-auth-btn signup" id="headerSignup">新規登録</button><button class="header-auth-btn" id="headerLogin">ログイン</button><button class="header-auth-btn" id="headerAccount" hidden>アカウント</button></div></header>
 <div class="overlay" id="overlay"></div>
 <div class="layout">
 <aside class="sidebar" id="sidebar"><div class="navlabel">MENU / メニュー</div>
@@ -179,7 +179,7 @@ html.account-init-pending body{visibility:hidden}
 <div id="signupForm"><h3>新規アカウント登録</h3><label for="signupEmail">メールアドレス</label><input class="field" id="signupEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="signupPassword">パスワード（8文字以上）</label><input class="field" id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="パスワード"><button class="btn primary" id="signupSubmit">確認メールを送信して登録</button></div>
 <div id="loginForm" hidden><h3>ログイン</h3><p class="muted">ログイン状態はこの端末のブラウザーに保存され、次回アクセス時も維持されます。共有端末では使用後にログアウトしてください。</p><label for="loginEmail">メールアドレス</label><input class="field" id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="loginPassword">パスワード</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード"><div class="row"><button class="btn primary" id="loginSubmit">ログイン</button><button class="btn" id="resetPassword">パスワードを再設定</button></div></div>
 <button class="btn" id="logoutButton" hidden>ログアウト</button><p id="accountMessage" class="muted" aria-live="polite"></p></div></div>
-<div class="panel" id="profilePanel" hidden style="margin-top:16px"><h3>🏷️ ニックネーム設定</h3><p class="muted">他のユーザーにも表示される名前です。1〜20文字で設定できます。</p><div id="profileRoleLabel" class="muted"></div><label for="profileNickname">ニックネーム</label><input class="field" id="profileNickname" maxlength="20" placeholder="表示したい名前"><button class="btn primary" id="saveProfileNickname">ニックネームを保存</button><p id="profileNicknameStatus" class="muted" aria-live="polite"></p></div><div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
+<div class="panel" id="profilePanel" hidden style="margin-top:16px"><h3>🏷️ ニックネーム設定</h3><p class="muted">他のユーザーにも表示される名前です。1〜20文字で設定できます。</p><div id="profileRoleLabel" class="muted"></div><label for="profileNickname">ニックネーム</label><input class="field" id="profileNickname" maxlength="20" placeholder="表示したい名前"><button class="btn primary" id="saveProfileNickname">プロフィールを保存</button><p id="profileNicknameStatus" class="muted" aria-live="polite"></p><hr style="border-color:var(--line);margin:18px 0"><h3>🎨 プロフィールカスタマイズ</h3><label for="sharedBio">自己紹介</label><textarea class="field" id="sharedBio" maxlength="240" rows="3" placeholder="自分らしい紹介文"></textarea><label for="sharedGame">好きなゲーム</label><input class="field" id="sharedGame" maxlength="60" placeholder="例：Fortnite"><label for="sharedPlayStyle">プレイスタイル</label><input class="field" id="sharedPlayStyle" maxlength="60" placeholder="例：競技・建築・カジュアル"><label for="sharedAvatar">アイコン画像URL（HTTPS）</label><input class="field" id="sharedAvatar" type="url" placeholder="https://..."><label for="sharedBanner">バナー画像URL（HTTPS）</label><input class="field" id="sharedBanner" type="url" placeholder="https://..."><div class="row"><div style="flex:1"><label for="sharedAccent">アクセントカラー</label><input class="field" id="sharedAccent" type="color" value="#8b7cff"></div><div style="flex:1"><label for="sharedNameColor">ネームカラー</label><input class="field" id="sharedNameColor" type="color" value="#ffffff"></div></div><label for="sharedTheme">テーマ</label><select class="field" id="sharedTheme"><option value="midnight">ミッドナイト</option><option value="neon">ネオン</option><option value="aurora">オーロラ</option></select><label for="sharedNameEffect">ネームエフェクト</label><select class="field" id="sharedNameEffect"><option value="none">なし</option><option value="glow">ネオン発光</option><option value="gradient">グラデーション</option><option value="glitch">グリッチ</option></select><label for="sharedFont">フォント</label><select class="field" id="sharedFont"><option value="default">標準</option><option value="serif">セリフ</option><option value="mono">モノスペース</option></select><p class="muted">プロフィールはAevNetworkと共有されます。ネーム変更は14日ごとです。</p></div><div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
 <div class="row"><button class="btn primary" id="runDiagnostics">ブラウザー診断を実行</button><button class="btn" id="downloadDebugReport">診断レポートを保存</button><button class="btn" id="refreshAdminTickets">サポート一覧を更新</button></div>
 <div id="diagnosticResults" class="panel" style="margin-top:12px">診断はまだ実行されていません。</div><h3>サポートリクエスト管理</h3><button class="btn" data-page="admin-cancelled">キャンセル済みリクエスト専用ページを開く</button><div id="adminSupportList" class="muted">一覧を読み込んでください。</div><p class="muted">診断はこのブラウザー内の情報のみを確認します。サーバーのログや他ユーザーの端末情報は取得しません。</p></div><div class="panel" id="adminClaimPanel" style="margin-top:16px"><h3>🔐 開発者・管理者モード</h3><p class="muted">管理者登録は永久に1アカウントのみです。ログアウトしても管理者枠は解除されません。</p><div id="adminClaimStatus" class="muted">管理者状態を確認しています…</div><div id="adminClaimForm" hidden><label for="adminClaimCode">管理者登録コード（8文字）</label><input class="field" id="adminClaimCode" maxlength="8" autocomplete="off" placeholder="8文字の大文字コード"><button class="btn primary" id="adminClaimSubmit">このアカウントを管理者に登録</button></div><p id="adminClaimMessage" class="muted" aria-live="polite"></p></div>
 <div class="panel" id="supabaseConfigPanel" style="display:none"><h3>🔌 認証サービス接続</h3><p class="muted">SupabaseのProject URLとPublishable keyをここに設定すると、登録・ログイン機能を接続できます。入力した値はこのブラウザに保存されます。Publishable key（公開用キー）のみ使用してください。Secret key / service_role keyは絶対に入力しないでください。</p><label for="supabaseProjectUrl">Project URL</label><input class="field" id="supabaseProjectUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="url"><label for="supabasePublishableKey">Publishable key（公開用）</label><input class="field" id="supabasePublishableKey" type="password" autocomplete="off" placeholder="sb_publishable_..."><div class="row"><button class="btn primary" id="saveSupabaseConfig">接続設定を保存して再接続</button><button class="btn" id="clearSupabaseConfig">設定を削除</button></div><p id="supabaseConfigMessage" class="muted" aria-live="polite"></p></div><div class="panel" style="margin-top:14px"><h3>アカウントについて</h3><p>メールアドレス登録とログインは認証サービスを利用します。認証設定が完了すると利用できます。現在のタスク・メモ等のローカル保存データを自動的にクラウドへ同期する機能は、別途データ同期の実装が必要です。</p></div></section>
@@ -841,6 +841,16 @@ function showRouletteCongrats(round){
  aevRouletteCongratsTimer=setTimeout(()=>{modal.classList.remove('show');aevRouletteCongratsTimer=null},3000);
 }
 
+function sharedProfileInput(){
+ return {bio:$('sharedBio')?.value||'',favorite_game:$('sharedGame')?.value||'',play_style:$('sharedPlayStyle')?.value||'',avatar_url:$('sharedAvatar')?.value.trim()||'',banner_url:$('sharedBanner')?.value.trim()||'',accent_color:$('sharedAccent')?.value||'#8b7cff',theme:$('sharedTheme')?.value||'midnight',name_color:$('sharedNameColor')?.value||'#ffffff',name_effect:$('sharedNameEffect')?.value||'glow',font_style:$('sharedFont')?.value||'default'};
+}
+function applySharedProfile(data){
+ const d=data?.profile||{};
+ if(d.accent_color)document.documentElement.style.setProperty('--accent',d.accent_color);
+ document.documentElement.style.setProperty('--profile-name-color',d.name_color||'#fff');
+ document.documentElement.dataset.profileTheme=d.theme||'midnight';
+ document.documentElement.dataset.profileFont=d.font_style||'default';
+}
 async function refreshAevProfile(){
  if(!supabaseClient)return;
  const {data:{session}}=await supabaseClient.auth.getSession();
@@ -849,16 +859,18 @@ async function refreshAevProfile(){
  const {data,error}=await supabaseClient.rpc('aevtools_get_my_profile');
  if(error){if(panel){panel.hidden=false;$('profileNicknameStatus').textContent='プロフィールSQLを実行してください。'}return}
  aevCurrentProfile=data;
- if(panel){panel.hidden=false;$('profileNickname').value=data.nickname||'';$('profileRoleLabel').innerHTML='';if(data.role_label){const badge=document.createElement('span');badge.className='profile-role';badge.textContent=data.role_label;$('profileRoleLabel').append(badge)}else $('profileRoleLabel').textContent='一般ユーザー';}
+ const d=data.profile||{};
+ if(panel){panel.hidden=false;$('profileNickname').value=data.nickname||'';$('profileRoleLabel').innerHTML='';if(data.role_label){const badge=document.createElement('span');badge.className='profile-role';badge.textContent=data.role_label;$('profileRoleLabel').append(badge)}else $('profileRoleLabel').textContent='一般ユーザー';$('sharedBio').value=d.bio||'';$('sharedGame').value=d.favorite_game||'';$('sharedPlayStyle').value=d.play_style||'';$('sharedAvatar').value=d.avatar_url||'';$('sharedBanner').value=d.banner_url||'';$('sharedAccent').value=d.accent_color||'#8b7cff';$('sharedNameColor').value=d.name_color||'#ffffff';$('sharedTheme').value=d.theme||'midnight';$('sharedNameEffect').value=d.name_effect||'glow';$('sharedFont').value=d.font_style||'default';}
+ applySharedProfile(data);
 }
 $('saveProfileNickname')?.addEventListener('click',async()=>{
  const nickname=$('profileNickname').value.trim(),status=$('profileNicknameStatus');
- if(!nickname||nickname.length>20){status.textContent='ニックネームは1〜20文字で入力してください。';return}
- const b=$('saveProfileNickname');b.disabled=true;
- const {data,error}=await supabaseClient.rpc('aevtools_update_my_nickname',{p_nickname:nickname});
+ if(!nickname||nickname.length>20){status.textContent='ネームは1〜20文字で入力してください。';return}
+ const b=$('saveProfileNickname');b.disabled=true;status.textContent='保存しています…';
+ const {data,error}=await supabaseClient.rpc('aevtools_update_my_profile',{p_nickname:nickname,p_profile:sharedProfileInput()});
  b.disabled=false;
- if(error){const map={nickname_taken:'そのニックネームは既に使われています。',nickname_reserved:'そのニックネームは使用できません。',nickname_length_invalid:'ニックネームは1〜20文字で入力してください。'};status.textContent=map[error.message]||'保存できませんでした：'+error.message;return}
- aevCurrentProfile=data;status.textContent='ニックネームを保存しました。';await refreshRouletteState();
+ if(error){const map={nickname_taken:'このネームは既に使用されています。',nickname_reserved:'このネームは使用できません。',nickname_length_invalid:'ネームは1〜20文字で入力してください。',nickname_cooldown:'ネーム変更は14日ごとです。',invalid_avatar_url:'アイコンURLはHTTPSで入力してください。',invalid_banner_url:'バナーURLはHTTPSで入力してください。'};status.textContent=map[error.message]||'保存できませんでした：'+error.message;return}
+ aevCurrentProfile=data;applySharedProfile(data);status.textContent='保存しました。AevNetworkにも反映されます。';await refreshRouletteState();
 });
 async function ensureRouletteRealtime(){
  if(!supabaseClient)return;
