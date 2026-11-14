@@ -327,6 +327,20 @@ Deno.serve(async (req: Request) => {
       return respond(200, { acknowledged: true });
     }
 
+    if (action === "user_data_snapshot_restore") {
+      if (serviceControl?.maintenance_enabled === true) {
+        return respond(503, { error: "service_maintenance" });
+      }
+      // Never accept a user ID from the browser. Restore only the authenticated user.
+      const { data, error } = await adminClient.rpc("aevnetwork_restore_user_snapshot", {
+        p_user_id: userId
+      });
+      if (error) {
+        return respond(500, { error: "snapshot_restore_failed", detail: error.message });
+      }
+      return respond(200, { result: data ?? { restored: false, reason: "empty_result" } });
+    }
+
     // AevNetwork blacklist is scoped to this service only. It never disables
     // the shared Supabase Auth account or access to AevTools.
     const { data: blockedRow, error: blockedError } = await adminClient
