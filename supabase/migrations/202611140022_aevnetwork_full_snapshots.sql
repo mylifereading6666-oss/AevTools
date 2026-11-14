@@ -122,7 +122,7 @@ begin
     if tg_op <> 'DELETE' then perform public.aevnetwork_capture_user_snapshot(new.reporter_id); end if;
     if tg_op <> 'INSERT' then perform public.aevnetwork_capture_user_snapshot(old.reporter_id); end if;
 
-  elsif tg_table_name = 'aevtools_profiles' then
+  elsif tg_table_name = 'aevtools_profiles' or tg_table_name = 'aevnetwork_user_data' then
     if tg_op <> 'DELETE' then perform public.aevnetwork_capture_user_snapshot(new.user_id); end if;
     if tg_op <> 'INSERT' then perform public.aevnetwork_capture_user_snapshot(old.user_id); end if;
   end if;
@@ -130,6 +130,11 @@ begin
   if tg_op = 'DELETE' then return old; else return new; end if;
 end;
 $$;
+
+-- Replace the earlier raw-JSON trigger so the structured Network snapshot is preserved.
+drop trigger if exists aevnetwork_snapshot_user_data on public.aevnetwork_user_data;
+create trigger aevnetwork_snapshot_user_data after insert or update or delete on public.aevnetwork_user_data
+for each row execute function public.aevnetwork_refresh_snapshot_trigger();
 
 drop trigger if exists aevnetwork_snapshot_teams on public.aevnetwork_teams;
 create trigger aevnetwork_snapshot_teams after insert or update or delete on public.aevnetwork_teams
