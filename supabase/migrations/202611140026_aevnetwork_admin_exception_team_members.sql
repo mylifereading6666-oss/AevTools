@@ -151,3 +151,38 @@ $function$;
 
 revoke all on function public.aevnetwork_admin_add_team_member(uuid,uuid,uuid,text,text,uuid) from public, anon, authenticated;
 grant execute on function public.aevnetwork_admin_add_team_member(uuid,uuid,uuid,text,text,uuid) to service_role;
+
+-- Serialize invite-code issuance with membership approval on the same team row.
+create or replace function public.aevnetwork_save_team_invite(
+  p_team_id uuid,
+  p_code_hash text,
+  p_generated_at timestamptz
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_catalog
+as $function$
+declare
+  approved_count integer;
+begin
+  perform 1 from public.aevnetwork_teams where id = p_team_id for update;
+  if not found then raise exception 'team_not_found'; end if;
+
+  select count(*) into approved_count
+  from public.aevnetwork_team_members
+  where team_id = p_team_id and status = 'approved';
+
+  if approved_count >= 4 then raise exception 'team_full'; end if;
+
+  update public.aevnetwork_teams
+  set invite_code_hash = p_code_hash,
+      invite_code_updated_at = p_generated_at
+  where id = p_team_id;
+
+  return true;
+end;
+$function$;
+
+revoke all on function public.aevnetwork_save_team_invite(uuid,text,timestamptz) from public, anon, authenticated;
+grant execute on function public.aevnetwork_save_team_invite(uuid,text,timestamptz) to service_role;
