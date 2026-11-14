@@ -82,9 +82,11 @@ Deno.serve(async (req: Request) => {
     if (action === "is_admin") {
       // Reuse AevTools' single permanent administrator registry.
       // The database RPC is the authority; never trust a browser-supplied role.
-      const { data, error } = await adminClient.rpc("aevtools_is_admin", {}, {
-        head: false,
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       });
+      const { data, error } = await userClient.rpc("aevtools_is_admin");
       if (error) return respond(500, { error: "admin_check_failed" });
       return respond(200, { is_admin: data === true });
     }
