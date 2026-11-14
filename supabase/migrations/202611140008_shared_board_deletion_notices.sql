@@ -13,6 +13,21 @@ create table if not exists public.aevnetwork_community_deletion_notices (
 create index if not exists aevnetwork_community_deletion_notices_user_created_idx
   on public.aevnetwork_community_deletion_notices(user_id, created_at desc);
 
+-- Preserve previously issued AevTools deletion notices when the legacy table exists.
+do $
+begin
+  if to_regclass('public.aevtools_board_deletion_notices') is not null then
+    execute $copy$
+      insert into public.aevnetwork_community_deletion_notices
+        (id, user_id, item_type, item_title, item_content, reason, created_at, read_at)
+      select
+        id, user_id, item_type, item_title, item_content, reason, created_at, read_at
+      from public.aevtools_board_deletion_notices
+      on conflict (id) do nothing
+    $copy$;
+  end if;
+end $;
+
 alter table public.aevnetwork_community_deletion_notices enable row level security;
 revoke all on public.aevnetwork_community_deletion_notices from anon, authenticated;
 grant all on public.aevnetwork_community_deletion_notices to service_role;
