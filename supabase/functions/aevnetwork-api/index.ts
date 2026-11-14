@@ -251,8 +251,9 @@ Deno.serve(async (req: Request) => {
         return respond(400, { error: "invalid_community_report" });
       const table = type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
       const { data: target, error: targetError } = await adminClient.from(table)
-        .select("id").eq("id", targetId).is("deleted_at", null).maybeSingle();
+        .select("id,author_id").eq("id", targetId).is("deleted_at", null).maybeSingle();
       if (targetError || !target) return respond(404, { error: "community_target_not_found" });
+      if (target.author_id === userId) return respond(400, { error: "cannot_report_own_content" });
       const { error } = await adminClient.from("aevnetwork_community_reports")
         .insert({ target_type: type, target_id: targetId, reporter_id: userId, reason });
       if (error) return respond(400, { error: "community_report_duplicate_or_failed" });
