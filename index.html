@@ -1213,6 +1213,11 @@ $('announcementSave').onclick=async()=>{
 };
 $('announcementCancelEdit').onclick=resetAnnouncementEditor;
 $('announcementsRefresh').onclick=loadAnnouncements;
+if(supabaseClient){
+ supabaseClient.channel('aev-shared-announcements-tools')
+  .on('postgres_changes',{event:'*',schema:'public',table:'aevtools_announcements'},()=>loadAnnouncements())
+  .subscribe();
+}
 async function loadBoard(){
  const list=$('boardPosts');if(!list||!supabaseClient){if(list)list.textContent='読み込みには接続設定が必要です。';return}
  const session=await aevCommunitySession(),admin=await aevCommunityAdmin();
