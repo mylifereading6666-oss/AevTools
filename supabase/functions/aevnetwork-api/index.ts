@@ -25,6 +25,60 @@ function respond(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders });
 }
 
+
+const SOURCE_FILE_BUCKET = "aev-board-images";
+const SNAPSHOT_FILE_BUCKET = "aev-maintenance-file-snapshots";
+
+async function listStorageFiles(bucketName: string, prefix = ""): Promise<string[]> {
+  const bucket = adminClient.storage.from(bucketName);
+  const files: string[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const { data, error } = await bucket.list(prefix, { limit: 100, offset, sortBy: { column: "name", order: "asc" } });
+    if (error) throw new Error("storage_list_failed:" + error.message);
+    const entries = data ?? [];
+    for (const entry of entries) {
+      const path = prefix ? prefix + "/" + entry.name : entry.name;
+      if (entry.id === null) files.push(...await listStorageFiles(bucketName, path));
+      else files.push(path);
+    }
+    if (entries.length < 100) break;
+  }
+  return files;
+}
+
+async function copyStorageObject(fromBucket: string, toBucket: string, path: string) {
+  const { data, error } = await adminClient.storage.from(fromBucket).download(path);
+  if (error || !data) throw new Error("storage_download_failed:" + (error?.message ?? path));
+  const { error: uploadError } = await adminClient.storage.from(toBucket).upload(path, data, {
+    contentType: data.type || "application/octet-stream", upsert: true, cacheControl: "3600"
+  });
+  if (uploadError) throw new Error("storage_upload_failed:" + uploadError.message);
+}
+
+async function captureAllUserStorageFiles(): Promise<number> {
+  const paths = await listStorageFiles(SOURCE_FILE_BUCKET);
+  let copied = 0;
+  for (const path of paths) {
+    const userId = path.split("/")[0];
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) continue;
+    await copyStorageObject(SOURCE_FILE_BUCKET, SNAPSHOT_FILE_BUCKET, path);
+    copied++;
+  }
+  return copied;
+}
+
+async function restoreUserStorageFiles(userId: string): Promise<string[]> {
+  const paths = (await listStorageFiles(SNAPSHOT_FILE_BUCKET, userId)).filter(path => path.startsWith(userId + "/"));
+  for (const path of paths) await copyStorageObject(SNAPSHOT_FILE_BUCKET, SOURCE_FILE_BUCKET, path);
+  return paths;
+}
+
+async function removeRestoredStorageSnapshots(paths: string[]) {
+  if (!paths.length) return;
+  const { error } = await adminClient.storage.from(SNAPSHOT_FILE_BUCKET).remove(paths);
+  if (error) throw new Error("storage_snapshot_cleanup_failed:" + error.message);
+}
+
 async function hashTeamInvite(code: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
   return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -273,6 +327,13 @@ Deno.serve(async (req: Request) => {
     if (action === "service_set_maintenance") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
       const enabled = body?.enabled === true;
+      let storageFilesCopied = 0;
+      if (enabled) {
+        try { storageFilesCopied = await captureAllUserStorageFiles(); }
+        catch (storageError) {
+          return respond(500, { error: "storage_snapshot_failed", detail: String(storageError) });
+        }
+      }
       const { data, error } = await adminClient.rpc("aevtools_set_maintenance_with_snapshot", {
         p_enabled: enabled,
         p_updated_by: userId
@@ -281,7 +342,8 @@ Deno.serve(async (req: Request) => {
       return respond(200, {
         saved: true,
         maintenance_enabled: data?.maintenance_enabled === true,
-        snapshot: data?.snapshot ?? {}
+        snapshot: data?.snapshot ?? {},
+        storage_files_copied: storageFilesCopied
       });
     }
 
@@ -301,6 +363,10 @@ Deno.serve(async (req: Request) => {
       }
       if (serviceControl?.maintenance_enabled === true) {
         return respond(503, { error: "service_maintenance" });
+      }
+      try { await restoreUserStorageFiles(userId); }
+      catch (storageError) {
+        return respond(500, { error: "storage_snapshot_restore_failed", detail: String(storageError) });
       }
       const { data, error } = await adminClient.from("aev_user_data_snapshots")
         .select("data,source_updated_at,captured_at")
@@ -324,6 +390,12 @@ Deno.serve(async (req: Request) => {
       const { error } = await adminClient.from("aev_user_data_snapshots")
         .delete().eq("user_id", userId).eq("app_key", appKey);
       if (error) return respond(500, { error: "snapshot_ack_failed" });
+      try {
+        const paths = (await listStorageFiles(SNAPSHOT_FILE_BUCKET, userId)).filter(path => path.startsWith(userId + "/"));
+        await removeRestoredStorageSnapshots(paths);
+      } catch (storageError) {
+        return respond(500, { error: "storage_snapshot_cleanup_failed", detail: String(storageError) });
+      }
       return respond(200, { acknowledged: true });
     }
 
@@ -332,13 +404,23 @@ Deno.serve(async (req: Request) => {
         return respond(503, { error: "service_maintenance" });
       }
       // Never accept a user ID from the browser. Restore only the authenticated user.
+      let restoredPaths: string[] = [];
+      try { restoredPaths = await restoreUserStorageFiles(userId); }
+      catch (storageError) {
+        return respond(500, { error: "storage_snapshot_restore_failed", detail: String(storageError) });
+      }
       const { data, error } = await adminClient.rpc("aevnetwork_restore_user_snapshot", {
         p_user_id: userId
       });
-      if (error) {
-        return respond(500, { error: "snapshot_restore_failed", detail: error.message });
+      if (error) return respond(500, { error: "snapshot_restore_failed", detail: error.message });
+      try { await removeRestoredStorageSnapshots(restoredPaths); }
+      catch (storageError) {
+        return respond(500, { error: "storage_snapshot_cleanup_failed", detail: String(storageError) });
       }
-      return respond(200, { result: data ?? { restored: false, reason: "empty_result" } });
+      return respond(200, {
+        result: data ?? { restored: false, reason: "empty_result" },
+        storage_files_restored: restoredPaths.length
+      });
     }
 
     // AevNetwork blacklist is scoped to this service only. It never disables
