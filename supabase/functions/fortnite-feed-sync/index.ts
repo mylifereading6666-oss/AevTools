@@ -14,6 +14,76 @@ async function translateJa(value:string){const input=String(value||"").trim();if
 function youtubeEmbed(v:string){try{const u=new URL(v);let id="";if(u.hostname==="youtu.be")id=u.pathname.slice(1);else if(u.hostname.endsWith("youtube.com"))id=u.searchParams.get("v")||u.pathname.match(/\/embed\/([^/?]+)/)?.[1]||"";return id?"https://www.youtube-nocookie.com/embed/"+encodeURIComponent(id):"";}catch{return "";}}
 async function save(kind:"news"|"updates", item:Record<string,unknown>){const url=new URL("/rest/v1/aevnetwork_"+kind,supabaseUrl);url.searchParams.set("on_conflict","source_url");const r=await fetch(url,{method:"POST",headers:{"apikey":serviceKey,"Authorization":"Bearer "+serviceKey,"Content-Type":"application/json","Prefer":"resolution=ignore-duplicates,return=representation"},body:JSON.stringify(item)});if(!r.ok)throw new Error("database_insert_"+kind+"_"+r.status);const rows=await r.json();return Array.isArray(rows)&&rows.length>0;}
 async function fetchFortniteNews(){let inserted=0;const page=await fetch("https://www.fortnite.com/news?lang=ja",{headers:{"User-Agent":"AevNetwork/1.0 (official public news index reader)"}});if(!page.ok)throw new Error("fortnite_news_http_"+page.status);const html=await page.text();const seen=new Set<string>();const links=[...html.matchAll(/<a\b[^>]*href=["']([^"']*\/news\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];for(const match of links){if(seen.size>=15)break;let href=decode(match[1]);if(href.startsWith("/"))href="https://www.fortnite.com"+href;const sourceUrl=httpsUrl(href);if(!sourceUrl||seen.has(sourceUrl)||sourceUrl.includes("/news?"))continue;seen.add(sourceUrl);const card=match[2];const title=strip(card).slice(0,160)||strip(card.match(/alt=["']([^"']+)/i)?.[1]||"");if(!title)continue;let detail="";try{const detailUrl=new URL(sourceUrl);detailUrl.searchParams.set("lang","ja");const res=await fetch(detailUrl.toString(),{headers:{"User-Agent":"AevNetwork/1.0"}});if(res.ok)detail=await res.text();}catch{}const finalTitle=await translateJa(meta(detail,"og:title")||title);const body=(await translateJa(meta(detail,"og:description")||meta(detail,"description")||strip((detail.match(/<article\b[\s\S]*?<\/article>/i)||[])[0]||"")||"フォートナイト公式サイトで公開されたニュースです。")).slice(0,5000);const img=httpsUrl(meta(detail,"og:image")||card.match(/(?:src|data-src)=["']([^"']+)/i)?.[1]||"",sourceUrl);const video=meta(detail,"og:video:secure_url")||meta(detail,"og:video");const videoUrl=httpsUrl(video);const embed=youtubeEmbed(videoUrl);const slug=new URL(sourceUrl).pathname.split("/").filter(Boolean).pop()||sourceUrl;const item={category:"FORTNITE",title:finalTitle.slice(0,160),body,link_url:sourceUrl,published:true,created_by:null,created_at:meta(detail,"article:published_time")||now(),updated_at:now(),source_name:"Fortnite公式ニュース",source_url:sourceUrl,source_id:"fortnite-news:"+slug,image_url:img||null,video_url:videoUrl||null,video_embed_url:embed||null,content_type:"article"};if(await save("news",item))inserted++;}return inserted;}
+
+async function fetchFnjpNews(){
+  const base="https://uefn.fnjpnews.com/news";
+  const r=await fetch(base,{headers:{"User-Agent":"AevNetwork/1.0 (+https://mylifereading6666-oss.github.io/AevNetwork/)","Accept":"text/html"}});
+  if(!r.ok)throw new Error("fnjp_news_http_"+r.status);
+  const html=await r.text();
+  const candidates:{url:string;title:string}[]=[];
+  const seen=new Set<string>();
+  const anchors=[...html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
+  for(const match of anchors){
+    const href=decode(match[1]);
+    const sourceUrl=httpsUrl(href,base);
+    if(!sourceUrl)continue;
+    const u=new URL(sourceUrl);
+    if(!u.hostname.endsWith("fnjpnews.com"))continue;
+    if(!/(?:\/news\/|\/News\/|\/article\/)/i.test(u.pathname))continue;
+    if(/^\/news\/?$/i.test(u.pathname)||/^\/news\/ingame\/?$/i.test(u.pathname))continue;
+    u.hash="";
+    const canonical=u.toString();
+    const title=strip(match[2]).slice(0,160);
+    if(!title||title.length<5||seen.has(canonical))continue;
+    seen.add(canonical);
+    candidates.push({url:canonical,title});
+    if(candidates.length>=10)break;
+  }
+  let inserted=0;
+  for(const candidate of candidates){
+    let detail="";
+    try{
+      const page=await fetch(candidate.url,{headers:{"User-Agent":"AevNetwork/1.0 (+https://mylifereading6666-oss.github.io/AevNetwork/)","Accept":"text/html"}});
+      if(page.ok)detail=await page.text();
+    }catch{}
+    const title=(meta(detail,"og:title")||candidate.title).slice(0,160);
+    const rawBody=meta(detail,"og:description")||meta(detail,"description")||"FNJPNewsで公開されたFortnite関連ニュースです。";
+    const body=(await translateJa(rawBody)).slice(0,700);
+    const image=httpsUrl(meta(detail,"og:image"),candidate.url);
+    const published=meta(detail,"article:published_time")||meta(detail,"datePublished")||now();
+    const item={category:"FORTNITE",title,body,link_url:candidate.url,published:true,created_by:null,created_at:published,updated_at:now(),source_name:"FNJPNews ニュース",source_url:candidate.url,source_id:"fnjp-news:"+candidate.url.split("/").filter(Boolean).pop(),image_url:image||null,video_url:null,video_embed_url:null,content_type:"article"};
+    if(await save("news",item))inserted++;
+  }
+  return inserted;
+}
+async function fetchFnjpIngame(){
+  const pageUrl="https://uefn.fnjpnews.com/news/ingame";
+  const r=await fetch(pageUrl,{headers:{"User-Agent":"AevNetwork/1.0 (+https://mylifereading6666-oss.github.io/AevNetwork/)","Accept":"text/html"}});
+  if(!r.ok)throw new Error("fnjp_ingame_http_"+r.status);
+  const html=await r.text();
+  const headings=[...html.matchAll(/<h[23]\b[^>]*>([\s\S]*?)<\/h[23]>/gi)];
+  let inserted=0;
+  for(let i=0;i<headings.length&&i<20;i++){
+    const heading=headings[i];
+    const title=strip(heading[1]).slice(0,160);
+    if(!title||title==="ゲーム内ニュース")continue;
+    const start=(heading.index||0)+heading[0].length;
+    const end=i+1<headings.length?(headings[i+1].index||html.length):html.length;
+    const section=html.slice(start,end);
+    const rawBody=strip((section.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)||[])[1]||section).slice(0,700);
+    const previous=html.slice(0,heading.index||0);
+    const images=[...previous.matchAll(/<img\b[^>]*>/gi)];
+    const imageTag=images.length?images[images.length-1][0]:"";
+    const imageValue=(imageTag.match(/(?:src|data-src|data-original)\s*=\s*["']([^"']+)/i)||[])[1]||"";
+    const image=httpsUrl(imageValue,pageUrl);
+    const slug=encodeURIComponent(title.trim().replace(/\s+/g,"-"));
+    const sourceUrl=pageUrl+"#"+slug;
+    const item={category:"FORTNITE",title,body:rawBody||title,link_url:pageUrl,published:true,created_by:null,created_at:now(),updated_at:now(),source_name:"FNJPNews ゲーム内ニュース",source_url:sourceUrl,source_id:"fnjp-ingame:"+slug,image_url:image||null,video_url:null,video_embed_url:null,content_type:"ingame"};
+    if(await save("news",item))inserted++;
+  }
+  return inserted;
+}
+
 async function fetchStatus(){const r=await fetch("https://status.epicgames.com/api/v2/incidents.json");if(!r.ok)throw new Error("epic_status_http_"+r.status);const data=await r.json();let inserted=0;for(const incident of (data.incidents||[]).slice(0,100)){const affected=(incident.components||[]).some((component:any)=>/fortnite/i.test(String(component.name||"")))||/fortnite/i.test(String(incident.name||""));if(!affected)continue;const created=new Date(incident.created_at||now());if(Date.now()-created.getTime()>45*86400000)continue;const updates=(incident.incident_updates||[]).slice(0,5);const latest=updates[0];const body=[latest?.body, "現在の状態："+(incident.status||"更新情報")].filter(Boolean).join("\n\n").slice(0,5000);const sourceUrl=httpsUrl(incident.shortlink||("https://status.epicgames.com/incidents/"+incident.id));if(!sourceUrl)continue;const item={title:(await translateJa(String(incident.name||"Fortnite サービス状況"))).slice(0,160),body,link_url:sourceUrl,published:true,created_by:null,created_at:incident.created_at||now(),updated_at:now(),source_name:"Epic Games Public Status",source_url:sourceUrl,source_id:"epic-status:"+incident.id,image_url:null,video_url:null,video_embed_url:null,content_type:"status"};if(await save("updates",item))inserted++;}return inserted;}
 async function fetchX(){if(!xBearer)return {news:0,updates:0,skipped:true};let news=0,updates=0;for(const account of ["FortniteStatus","Fortnite"]){const params=new URLSearchParams({query:"from:"+account+" -is:retweet",max_results:"50","tweet.fields":"created_at,attachments","expansions":"attachments.media_keys","media.fields":"type,url,preview_image_url,variants"});const r=await fetch("https://api.x.com/2/tweets/search/recent?"+params.toString(),{headers:{Authorization:"Bearer "+xBearer}});if(!r.ok)throw new Error("x_api_http_"+r.status);const data=await r.json();const media=new Map((data.includes?.media||[]).map((m:any)=>[m.media_key,m]));for(const tweet of data.data||[]){const url="https://x.com/"+account+"/status/"+tweet.id;const refs=(tweet.attachments?.media_keys||[]).map((k:string)=>media.get(k)).filter(Boolean);const photo=refs.find((m:any)=>m.type==="photo");const video=refs.find((m:any)=>m.type==="video"||m.type==="animated_gif");const translatedTweet=await translateJa(String(tweet.text||"Fortnite公式Xの投稿"));const item={title:translatedTweet.slice(0,160),body:translatedTweet.slice(0,5000),link_url:url,published:true,created_by:null,created_at:tweet.created_at||now(),updated_at:now(),source_name:account==="FortniteStatus"?"FortniteStatus 公式X":"Fortnite 公式X",source_url:url,source_id:"x:"+tweet.id,image_url:photo?httpsUrl(photo.url||""):(video?httpsUrl(video.preview_image_url||""):null),video_url:video?url:null,video_embed_url:video?"https://platform.twitter.com/embed/Tweet.html?id="+encodeURIComponent(tweet.id)+"&theme=dark":null,content_type:video?"video":"post"};if(await save(account==="FortniteStatus"?"updates":"news",item)){if(account==="FortniteStatus")updates++;else news++;}}}return {news,updates,skipped:false};}
-Deno.serve(async(req:Request)=>{if(req.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});if(req.method!=="POST")return response(405,{error:"method_not_allowed"});if(!syncSecret||req.headers.get("x-sync-secret")!==syncSecret)return response(401,{error:"unauthorized"});try{const results:{fortnite_news:number;epic_status:number;x_news:number;x_updates:number;x_skipped:boolean;checked_at:string}={fortnite_news:0,epic_status:0,x_news:0,x_updates:0,x_skipped:!xBearer,checked_at:now()};const errors:string[]=[];try{results.fortnite_news=await fetchFortniteNews();}catch(e){errors.push(String(e));}try{results.epic_status=await fetchStatus();}catch(e){errors.push(String(e));}try{const x=await fetchX();results.x_news=x.news;results.x_updates=x.updates;results.x_skipped=x.skipped;}catch(e){errors.push(String(e));}return response(errors.length?207:200,{ok:errors.length===0,results,errors});}catch(e){return response(500,{error:"sync_failed",detail:String(e)});}});
+Deno.serve(async(req:Request)=>{if(req.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});if(req.method!=="POST")return response(405,{error:"method_not_allowed"});if(!syncSecret||req.headers.get("x-sync-secret")!==syncSecret)return response(401,{error:"unauthorized"});let mode="all";try{const payload=await req.json();mode=String(payload?.mode||"all");}catch{}if(mode==="fnjp"){const results={fnjp_news:0,fnjp_ingame:0,checked_at:now()};const errors:string[]=[];try{results.fnjp_news=await fetchFnjpNews();}catch(e){errors.push(String(e));}try{results.fnjp_ingame=await fetchFnjpIngame();}catch(e){errors.push(String(e));}return response(errors.length?207:200,{ok:errors.length===0,results,errors});}try{const results:{fortnite_news:number;epic_status:number;x_news:number;x_updates:number;x_skipped:boolean;checked_at:string}={fortnite_news:0,epic_status:0,x_news:0,x_updates:0,x_skipped:!xBearer,checked_at:now()};const errors:string[]=[];try{results.fortnite_news=await fetchFortniteNews();}catch(e){errors.push(String(e));}try{results.epic_status=await fetchStatus();}catch(e){errors.push(String(e));}try{const x=await fetchX();results.x_news=x.news;results.x_updates=x.updates;results.x_skipped=x.skipped;}catch(e){errors.push(String(e));}return response(errors.length?207:200,{ok:errors.length===0,results,errors});}catch(e){return response(500,{error:"sync_failed",detail:String(e)});}});
