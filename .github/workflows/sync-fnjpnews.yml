@@ -25,9 +25,17 @@ jobs:
         env:
           SYNC_SECRET: ${{ secrets.FORTNITE_FEED_SYNC_SECRET }}
         run: |
-          curl --fail-with-body --silent --show-error \
+          response="$(curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Content-Type: application/json" \
             --header "x-sync-secret: $SYNC_SECRET" \
             --data '{"mode":"fnjp"}' \
-            "https://vuqbbwdojwmtehgsyfaq.supabase.co/functions/v1/fortnite-feed-sync"
+            "https://vuqbbwdojwmtehgsyfaq.supabase.co/functions/v1/fortnite-feed-sync")"
+          echo "$response" | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          print(json.dumps(data.get("results", {}), ensure_ascii=False))
+          if data.get("ok") is not True:
+              print("FNJPNews sync reported errors:", data.get("errors", []), file=sys.stderr)
+              sys.exit(1)
+          '
