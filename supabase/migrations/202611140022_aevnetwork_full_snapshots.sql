@@ -59,9 +59,9 @@ begin
 
   if tg_table_name = 'aevnetwork_teams' then
     v_team_id := case when tg_op = 'DELETE' then old.id else new.id end;
+    if tg_op <> 'DELETE' then perform public.aevnetwork_capture_user_snapshot(new.owner_id); end if;
+    if tg_op <> 'INSERT' then perform public.aevnetwork_capture_user_snapshot(old.owner_id); end if;
     for v_uid in
-      select owner_id from public.aevnetwork_teams where id = v_team_id
-      union
       select user_id from public.aevnetwork_team_members where team_id = v_team_id
     loop perform public.aevnetwork_capture_user_snapshot(v_uid); end loop;
 
