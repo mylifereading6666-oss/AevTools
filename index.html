@@ -1388,13 +1388,19 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
    const [m,a]=await Promise.all([aevSharedApiCall('service_get_status'),c.auth.getSession()]);
    maintenance=m.maintenance_enabled===true;
    isTestHelper=m.is_test_helper===true;
-   if(a.data?.session){const r=await c.rpc('aevtools_is_admin');isAdmin=!r.error&&r.data===true;}else isAdmin=false;
+   isAdmin=m.is_admin===true;
    const st=$('toolsMaintenanceStatus'),btn=$('toolsToggleMaintenance');
    if(st)st.textContent=maintenance?'現在：メンテナンスモード ON（一般ユーザーは利用停止）':'現在：通常稼働中';
    if(btn){btn.textContent=maintenance?'メンテナンスモードを解除':'メンテナンスモードを有効化';btn.disabled=!isAdmin;}
    gate();
    if(isAdmin)await loadToolsTestHelper();
-  }catch(e){gate();}
+  }catch(e){
+   gate();
+   const st=$('toolsMaintenanceStatus');
+   if(st)st.textContent='状態を取得できません：'+(e?.message||'通信エラー');
+   const helperStatus=$('toolsTestHelperStatus');
+   if(helperStatus)helperStatus.textContent='テスト補助ユーザー情報を読み込めません。ページを再読み込みしてください。';
+  }
  }
  async function loadToolsTestHelper(){
   const status=$('toolsTestHelperStatus'),select=$('toolsTestHelperUser'),button=$('toolsAssignTestHelper');
