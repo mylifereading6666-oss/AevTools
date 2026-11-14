@@ -63,6 +63,7 @@ Deno.serve(async (req: Request) => {
       return respond(200, {
         maintenance_enabled: data?.maintenance_enabled === true,
         updated_at: data?.updated_at ?? null,
+        is_admin: isAdmin,
         is_test_helper: !!userId && helper?.user_id === userId && !isAdmin,
         test_helper_assigned: !!helper?.user_id,
       });
