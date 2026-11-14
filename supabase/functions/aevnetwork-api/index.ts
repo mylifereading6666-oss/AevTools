@@ -295,6 +295,8 @@ Deno.serve(async (req: Request) => {
       const {data:team}=await adminClient.from("aevnetwork_teams").select("owner_id").eq("id",teamId).maybeSingle();
       if(!team)return respond(404,{error:"team_not_found"});
       if(team.owner_id===userId)return respond(403,{error:"leader_cannot_leave"});
+      const {data:currentMembership}=await adminClient.from("aevnetwork_team_members").select("status").eq("team_id",teamId).eq("user_id",userId).maybeSingle();
+      if(!currentMembership||currentMembership.status!=="approved")return respond(403,{error:"team_membership_required"});
       if(action==="teams_chat_hide"){
         const now=new Date().toISOString();
         const {error:prefError}=await adminClient.from("aevnetwork_team_chat_preferences").upsert({team_id:teamId,user_id:userId,hidden_before:now,hidden_at:now,updated_at:now},{onConflict:"team_id,user_id"});
