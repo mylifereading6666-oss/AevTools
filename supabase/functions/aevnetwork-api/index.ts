@@ -477,10 +477,11 @@ Deno.serve(async (req: Request) => {
         const code=String(value%100000000).padStart(8,"0");
         const hash=await hashTeamInvite(code);
         const generatedAt=new Date().toISOString();
-        const {error}=await adminClient.from("aevnetwork_teams")
-          .update({invite_code_hash:hash,invite_code_updated_at:generatedAt})
-          .eq("id",teamId);
+        const {error}=await adminClient.rpc("aevnetwork_save_team_invite",{
+          p_team_id:teamId,p_code_hash:hash,p_generated_at:generatedAt
+        });
         if(!error)return respond(200,{generated:true,code,generated_at:generatedAt,expires_at:new Date(new Date(generatedAt).getTime()+10*60*1000).toISOString()});
+        if((error.message||"").includes("team_full"))return respond(409,{error:"team_full"});
         if(error.code==="23505")continue;
         return respond(500,{error:"invite_code_save_failed"});
       }
