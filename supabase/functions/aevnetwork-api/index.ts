@@ -273,11 +273,16 @@ Deno.serve(async (req: Request) => {
     if (action === "service_set_maintenance") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
       const enabled = body?.enabled === true;
-      const { error } = await adminClient.from("aevtools_service_control").upsert({
-        singleton: true, maintenance_enabled: enabled, updated_at: new Date().toISOString(), updated_by: userId
-      }, { onConflict: "singleton" });
-      if (error) return respond(500, { error: "service_maintenance_update_failed" });
-      return respond(200, { saved: true, maintenance_enabled: enabled });
+      const { data, error } = await adminClient.rpc("aevtools_set_maintenance_with_snapshot", {
+        p_enabled: enabled,
+        p_updated_by: userId
+      });
+      if (error) return respond(500, { error: "service_maintenance_update_failed", detail: error.message });
+      return respond(200, {
+        saved: true,
+        maintenance_enabled: data?.maintenance_enabled === true,
+        snapshot: data?.snapshot ?? {}
+      });
     }
 
     const { data: serviceControl, error: serviceControlError } = await adminClient.from("aevtools_service_control")
@@ -285,6 +290,41 @@ Deno.serve(async (req: Request) => {
     if (serviceControlError) return respond(500, { error: "service_status_load_failed" });
     if (serviceControl?.maintenance_enabled === true && !isAdmin && !isTestHelper) {
       return respond(503, { error: "service_maintenance", message: "現在メンテナンス中です。" });
+    }
+
+    // Snapshot access is always scoped to the authenticated user's own row.
+    // The browser must acknowledge only after its merged data has been saved.
+    if (action === "user_data_snapshot_get") {
+      const appKey = String(body?.app_key ?? "");
+      if (!["aevtools", "aevnetwork"].includes(appKey)) {
+        return respond(400, { error: "invalid_app_key" });
+      }
+      if (serviceControl?.maintenance_enabled === true) {
+        return respond(503, { error: "service_maintenance" });
+      }
+      const { data, error } = await adminClient.from("aev_user_data_snapshots")
+        .select("data,source_updated_at,captured_at")
+        .eq("user_id", userId).eq("app_key", appKey).maybeSingle();
+      if (error) return respond(500, { error: "snapshot_load_failed" });
+      return respond(200, {
+        snapshot: data?.data ?? null,
+        source_updated_at: data?.source_updated_at ?? null,
+        captured_at: data?.captured_at ?? null
+      });
+    }
+
+    if (action === "user_data_snapshot_ack") {
+      const appKey = String(body?.app_key ?? "");
+      if (!["aevtools", "aevnetwork"].includes(appKey)) {
+        return respond(400, { error: "invalid_app_key" });
+      }
+      if (serviceControl?.maintenance_enabled === true) {
+        return respond(503, { error: "service_maintenance" });
+      }
+      const { error } = await adminClient.from("aev_user_data_snapshots")
+        .delete().eq("user_id", userId).eq("app_key", appKey);
+      if (error) return respond(500, { error: "snapshot_ack_failed" });
+      return respond(200, { acknowledged: true });
     }
 
     // AevNetwork blacklist is scoped to this service only. It never disables
