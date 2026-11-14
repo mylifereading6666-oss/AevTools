@@ -327,18 +327,25 @@ Deno.serve(async (req: Request) => {
     if (action === "service_set_maintenance") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
       const enabled = body?.enabled === true;
-      let storageFilesCopied = 0;
-      if (enabled) {
-        try { storageFilesCopied = await captureAllUserStorageFiles(); }
-        catch (storageError) {
-          return respond(500, { error: "storage_snapshot_failed", detail: String(storageError) });
-        }
-      }
       const { data, error } = await adminClient.rpc("aevtools_set_maintenance_with_snapshot", {
         p_enabled: enabled,
         p_updated_by: userId
       });
       if (error) return respond(500, { error: "service_maintenance_update_failed", detail: error.message });
+      let storageFilesCopied = 0;
+      if (enabled) {
+        try {
+          // Maintenance is already ON, so new uploads should be blocked before file enumeration.
+          storageFilesCopied = await captureAllUserStorageFiles();
+        } catch (storageError) {
+          // Keep maintenance ON if file backup is incomplete; do not expose a partially backed-up site.
+          return respond(500, {
+            error: "storage_snapshot_failed_maintenance_remains_enabled",
+            detail: String(storageError),
+            maintenance_enabled: true
+          });
+        }
+      }
       return respond(200, {
         saved: true,
         maintenance_enabled: data?.maintenance_enabled === true,
