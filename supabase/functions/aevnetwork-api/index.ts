@@ -71,6 +71,22 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === "public_list_content") {
+      const kind = String(body?.kind ?? "");
+      const publicTables: Record<string, string> = {
+        announcements: "aevnetwork_announcements",
+        news: "aevnetwork_news",
+        updates: "aevnetwork_updates"
+      };
+      const table = publicTables[kind];
+      if (!table) return respond(400, { error: "invalid_content_kind" });
+      let query = adminClient.from(table).select("*").order("created_at", { ascending: false }).limit(100);
+      if (kind !== "announcements") query = query.eq("published", true);
+      const { data, error } = await query;
+      if (error) return respond(500, { error: "content_load_failed" });
+      return respond(200, { items: data ?? [] });
+    }
+
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) return respond(401, { error: "missing_session" });
