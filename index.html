@@ -838,15 +838,15 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
  }
  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
  async function refreshAdminStatus(){
-  const claimStatus=$('adminClaimStatus'),claimForm=$('adminClaimForm');
-  if(!supabaseClient){claimStatus.textContent='認証サービスに接続できません。';claimForm.hidden=true;return}
+  const claimStatus=$('adminClaimStatus');
+  if(!supabaseClient){claimStatus.textContent='認証サービスに接続できません。';return}
   const {data:{session}}=await supabaseClient.auth.getSession();
   if(!session){claimStatus.textContent='管理者状態を確認するにはログインしてください。';claimForm.hidden=true;$('adminToolsPanel').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true;return}
   try{
    const {data,error}=await supabaseClient.rpc('aevtools_is_admin');
    if(error)throw error;
    if(data===true){claimStatus.textContent='👑 このアカウントは永久管理者です。';claimForm.hidden=true;$('adminToolsPanel').hidden=false;$('adminCancelledNav').hidden=false;$('adminResolvedNav').hidden=false;$('adminBlacklistNav').hidden=false;$('adminUsersNav').hidden=false;$('adminMenuGroup').hidden=false;loadAdminUsers();loadAdminDirectChats();loadAdminSupportTickets();loadAdminResolvedTickets();loadAdminCancelledTickets();loadAdminBlacklistUsers()}
-   else{claimStatus.textContent='このアカウントは管理者ではありません。管理者登録が未完了の場合のみ、登録コードを入力できます。';claimForm.hidden=false;$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true}
+   else{claimStatus.textContent='このアカウントは管理者ではありません。';$('adminToolsPanel').hidden=true;$('adminCancelledNav').hidden=true;$('adminResolvedNav').hidden=true;$('adminBlacklistNav').hidden=true;$('adminUsersNav').hidden=true;$('adminMenuGroup').hidden=true}
   }catch(e){claimStatus.textContent='管理者状態を確認できません。Supabaseの管理者SQL設定が必要です。';claimForm.hidden=true}
  }
  $('adminClaimSubmit').onclick=async()=>{
@@ -857,7 +857,7 @@ $('adminUserSearch')?.addEventListener('input',renderAdminUsers);
    const {data,error}=await supabaseClient.rpc('aevtools_claim_admin',{p_code:code});
    if(error)throw error;
    if(data&&data.ok){$('adminClaimMessage').textContent='管理者登録済みです。このアカウントが永久管理者になりました。';$('adminClaimCode').value='';await refreshAdminStatus();syncAdminAchievementUnlocks()}
-   else if(data&&data.reason==='admin_already_exists'){$('adminClaimMessage').textContent='管理者はすでに登録済みです。2人目の管理者登録はできません。';$('adminClaimForm').hidden=true}
+   else if(data&&data.reason==='admin_already_exists'){$('adminClaimMessage').textContent='管理者はすでに登録済みです。2人目の管理者登録はできません。';}
    else if(data&&data.reason==='invalid_code'){$('adminClaimMessage').textContent='管理者コードが違います。'}
    else{$('adminClaimMessage').textContent='登録できませんでした。ログイン状態を確認してください。'}
   }catch(e){$('adminClaimMessage').textContent='管理者登録に失敗しました。Supabase SQL設定が完了しているか確認してください。'}
