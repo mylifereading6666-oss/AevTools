@@ -178,27 +178,49 @@ Deno.serve(async (req: Request) => {
       const id = String(body?.id ?? "");
       if (!id) return respond(400, { error: "invalid_community_target" });
       const targetQuery = type === "post"
-        ? adminClient.from(table).select("id,author_id,image_path")
-        : adminClient.from(table).select("id,author_id");
+        ? adminClient.from(table).select("id,author_id,title,body,image_path")
+        : adminClient.from(table).select("id,author_id,body");
       const { data: target, error: targetError } = await targetQuery
         .eq("id", id).is("deleted_at", null).maybeSingle();
       if (targetError || !target) return respond(404, { error: "community_target_not_found" });
       if (target.author_id !== userId && !isAdmin) return respond(403, { error: "owner_or_admin_required" });
-      const reason = isAdmin && target.author_id !== userId ? String(body?.reason ?? "管理者によるモデレーション").trim().slice(0,500) : null;
+
+      const isModeratorRemoval = isAdmin && target.author_id !== userId;
+      const reason = isModeratorRemoval ? String(body?.reason ?? "").trim().slice(0, 500) : null;
+      if (isModeratorRemoval && (!reason || reason.length < 3))
+        return respond(400, { error: "moderation_reason_required" });
+
+      if (isModeratorRemoval) {
+        const { error: noticeError } = await adminClient.from("aevnetwork_community_deletion_notices").insert({
+          user_id: target.author_id,
+          item_type: type,
+          item_title: type === "post" ? target.title : null,
+          item_content: String(target.body ?? ""),
+          reason
+        });
+        if (noticeError) return respond(500, { error: "deletion_notice_create_failed" });
+      }
+
+      const deletedAt = new Date().toISOString();
       const { error } = await adminClient.from(table).update({
-        deleted_at: new Date().toISOString(),
-        moderated_by: isAdmin && target.author_id !== userId ? userId : null,
+        deleted_at: deletedAt,
+        moderated_by: isModeratorRemoval ? userId : null,
         moderation_reason: reason
-      }).eq("id", id);
+      }).eq("id", id).is("deleted_at", null);
       if (error) return respond(500, { error: "community_delete_failed" });
-      if (type === "post" && target.image_path) await adminClient.storage.from("aev-board-images").remove([target.image_path]);
-      if (isAdmin && target.author_id !== userId) {
+
+      if (type === "post") {
+        await adminClient.from("aevnetwork_community_comments")
+          .update({ deleted_at: deletedAt, moderated_by: isModeratorRemoval ? userId : null, moderation_reason: reason })
+          .eq("post_id", id).is("deleted_at", null);
+        if (target.image_path) await adminClient.storage.from("aev-board-images").remove([target.image_path]);
+      }
+      if (isModeratorRemoval) {
         await adminClient.from("aevnetwork_community_moderation_logs").insert({
-          target_type: type, target_id: id, action: "remove",
-          reason: reason ?? "管理者によるモデレーション", admin_id: userId
+          target_type: type, target_id: id, action: "remove", reason, admin_id: userId
         });
       }
-      return respond(200, { deleted: true });
+      return respond(200, { deleted: true, notice_created: isModeratorRemoval });
     }
 
     if (action === "community_report") {
@@ -247,12 +269,35 @@ Deno.serve(async (req: Request) => {
       const { data: report, error: reportError } = await adminClient.from("aevnetwork_community_reports")
         .select("id,target_type,target_id,status").eq("id",reportId).eq("status","pending").maybeSingle();
       if (reportError || !report) return respond(404, { error: "community_report_not_found" });
+
       if (remove) {
         const table = report.target_type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
-        const { error } = await adminClient.from(table).update({
-          deleted_at: new Date().toISOString(), moderated_by: userId, moderation_reason: reason
-        }).eq("id",report.target_id).is("deleted_at",null);
-        if (error) return respond(500, { error: "community_moderation_failed" });
+        const columns = report.target_type === "post" ? "id,author_id,title,body,image_path" : "id,author_id,body";
+        const { data: target, error: targetError } = await adminClient.from(table)
+          .select(columns).eq("id",report.target_id).is("deleted_at",null).maybeSingle();
+        if (targetError) return respond(500, { error: "community_target_load_failed" });
+        if (target) {
+          const { error: noticeError } = await adminClient.from("aevnetwork_community_deletion_notices").insert({
+            user_id: target.author_id,
+            item_type: report.target_type,
+            item_title: report.target_type === "post" ? target.title : null,
+            item_content: String(target.body ?? ""),
+            reason
+          });
+          if (noticeError) return respond(500, { error: "deletion_notice_create_failed" });
+
+          const deletedAt = new Date().toISOString();
+          const { error } = await adminClient.from(table).update({
+            deleted_at: deletedAt, moderated_by: userId, moderation_reason: reason
+          }).eq("id",report.target_id).is("deleted_at",null);
+          if (error) return respond(500, { error: "community_moderation_failed" });
+          if (report.target_type === "post") {
+            await adminClient.from("aevnetwork_community_comments")
+              .update({ deleted_at: deletedAt, moderated_by: userId, moderation_reason: reason })
+              .eq("post_id",report.target_id).is("deleted_at",null);
+            if (target.image_path) await adminClient.storage.from("aev-board-images").remove([target.image_path]);
+          }
+        }
       }
       const { error: updateError } = await adminClient.from("aevnetwork_community_reports").update({
         status: "resolved", reviewed_by: userId, reviewed_at: new Date().toISOString()
