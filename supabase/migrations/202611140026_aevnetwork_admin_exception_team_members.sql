@@ -23,6 +23,10 @@ declare
   approved_count integer;
   override_audit_id uuid;
 begin
+  if new.status <> 'approved' then
+    return new;
+  end if;
+
   perform 1 from public.aevnetwork_teams where id = new.team_id for update;
   if not found then
     raise exception 'team_not_found';
