@@ -1442,7 +1442,7 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
 
  $('toolsToggleMaintenance')?.addEventListener('click',async()=>{
   if(!isAdmin)return;const btn=$('toolsToggleMaintenance');btn.disabled=true;
-  try{const {error}=await window.__aevMaintenanceClient.rpc('aevtools_set_service_maintenance',{p_enabled:!maintenance});if(error)throw error;await updateMaintenance();}
+  try{await aevSharedApiCall('service_set_maintenance',{enabled:!maintenance});await updateMaintenance();}
   catch(e){const st=$('toolsMaintenanceStatus');if(st)st.textContent='設定できませんでした：'+(e.message||'通信エラー');}
   finally{btn.disabled=false;}
  });
