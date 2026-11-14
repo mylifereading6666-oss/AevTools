@@ -100,18 +100,23 @@ Deno.serve(async (req: Request) => {
 
     if (action === "admin_dashboard") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
-      const [users, announcements, news, updates, blacklist] = await Promise.all([
-        adminClient.auth.admin.listUsers({ page: 1, perPage: 1 }),
+      let userCount = 0;
+      for (let page = 1; page <= 100; page++) {
+        const batch = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+        if (batch.error) return respond(500, { error: "dashboard_load_failed" });
+        userCount += batch.data.users.length;
+        if (batch.data.users.length < 1000) break;
+      }
+      const [announcements, news, updates, blacklist] = await Promise.all([
         adminClient.from("aevnetwork_announcements").select("id", { count: "exact", head: true }),
         adminClient.from("aevnetwork_news").select("id", { count: "exact", head: true }),
         adminClient.from("aevnetwork_updates").select("id", { count: "exact", head: true }),
         adminClient.from("aevnetwork_blacklist").select("user_id", { count: "exact", head: true }),
       ]);
-      if (users.error || announcements.error || news.error || updates.error || blacklist.error)
+      if (announcements.error || news.error || updates.error || blacklist.error)
         return respond(500, { error: "dashboard_load_failed" });
       return respond(200, { metrics: {
-        users: users.data?.users?.length === 0 ? 0 : (users.data as any)?.total ?? null,
-        announcements: announcements.count ?? 0, news: news.count ?? 0,
+        users: userCount, announcements: announcements.count ?? 0, news: news.count ?? 0,
         updates: updates.count ?? 0, blacklist: blacklist.count ?? 0
       }});
     }
@@ -220,17 +225,6 @@ Deno.serve(async (req: Request) => {
       return respond(200, { removed: true });
     }
 
-
-      // Reuse AevTools' single permanent administrator registry.
-      // The database RPC is the authority; never trust a browser-supplied role.
-      const userClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-      });
-      const { data, error } = await userClient.rpc("aevtools_is_admin");
-      if (error) return respond(500, { error: "admin_check_failed" });
-      return respond(200, { is_admin: data === true });
-    }
 
     if (action === "get_data") {
       const { data, error } = await adminClient
