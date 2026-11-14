@@ -188,10 +188,11 @@ Deno.serve(async (req: Request) => {
         const value=new DataView(random.buffer).getUint32(0);
         const code=String(value%100000000).padStart(8,"0");
         const hash=await hashTeamInvite(code);
+        const generatedAt=new Date().toISOString();
         const {error}=await adminClient.from("aevnetwork_teams")
-          .update({invite_code_hash:hash,invite_code_updated_at:new Date().toISOString()})
+          .update({invite_code_hash:hash,invite_code_updated_at:generatedAt})
           .eq("id",teamId);
-        if(!error)return respond(200,{generated:true,code});
+        if(!error)return respond(200,{generated:true,code,generated_at:generatedAt,expires_at:new Date(new Date(generatedAt).getTime()+10*60*1000).toISOString()});
         if(error.code==="23505")continue;
         return respond(500,{error:"invite_code_save_failed"});
       }
@@ -202,8 +203,10 @@ Deno.serve(async (req: Request) => {
       const code=String(body?.code??"").replace(/\s/g,"");
       if(!/^\d{8}$/.test(code))return respond(400,{error:"invalid_invite_code"});
       const hash=await hashTeamInvite(code);
-      const {data:team}=await adminClient.from("aevnetwork_teams").select("id,name").eq("invite_code_hash",hash).maybeSingle();
+      const {data:team}=await adminClient.from("aevnetwork_teams").select("id,name,invite_code_updated_at").eq("invite_code_hash",hash).maybeSingle();
       if(!team)return respond(404,{error:"invite_code_not_found"});
+      const issuedAt=team.invite_code_updated_at?new Date(team.invite_code_updated_at).getTime():0;
+      if(!issuedAt||!Number.isFinite(issuedAt)||Date.now()-issuedAt>=10*60*1000)return respond(410,{error:"invite_code_expired"});
       const {data:existing}=await adminClient.from("aevnetwork_team_members").select("id,status,role").eq("team_id",team.id).eq("user_id",userId).maybeSingle();
       if(existing?.status==="approved"||existing?.role==="leader")return respond(409,{error:"already_team_member"});
       const result=existing
@@ -282,7 +285,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "teams_members") {
       const teamId=String(body?.team_id??"");
-      const {data:team}=await adminClient.from("aevnetwork_teams").select("id,owner_id").eq("id",teamId).maybeSingle();
+      const {data:team}=await adminClient.from("aevnetwork_teams").select("id,owner_id,invite_code_updated_at").eq("id",teamId).maybeSingle();
       if(!team)return respond(404,{error:"team_not_found"});
       const {data:mine}=await adminClient.from("aevnetwork_team_members").select("status,role").eq("team_id",teamId).eq("user_id",userId).maybeSingle();
       if(!mine||mine.status!=="approved")return respond(403,{error:"team_membership_required"});
@@ -294,7 +297,7 @@ Deno.serve(async (req: Request) => {
       const {data:adminRows}=ids.length?await adminClient.from("aevnetwork_team_admin_registry").select("user_id").in("user_id",ids):{data:[]};
       const adminIds=new Set((adminRows??[]).map((x:any)=>x.user_id));
       const isLeader=team.owner_id===userId;
-      return respond(200,{is_leader:isLeader,is_owner:isLeader,items:(rows??[]).filter((m:any)=>isLeader||m.status==="approved").map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",is_admin:adminIds.has(m.user_id)}))});
+      return respond(200,{is_leader:isLeader,is_owner:isLeader,invite_code_updated_at:isLeader?team.invite_code_updated_at:null,items:(rows??[]).filter((m:any)=>isLeader||m.status==="approved").map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",is_admin:adminIds.has(m.user_id)}))});
     }
 
     if (action === "teams_kick") {
