@@ -164,6 +164,121 @@ Deno.serve(async (req: Request) => {
     if (blockedError) return respond(500, { error: "blacklist_check_failed" });
     if (blockedRow && !isAdmin) return respond(403, { error: "aevnetwork_restricted", reason: blockedRow.reason });
 
+    if (action === "teams_list") {
+      const { data: teams, error } = await adminClient.from("aevnetwork_teams")
+        .select("id,name,description,game,owner_id,created_at").order("created_at",{ascending:false}).limit(100);
+      if (error) return respond(500,{error:"teams_load_failed"});
+      const ids=(teams??[]).map((t:any)=>t.id);
+      const [members,profiles,mine]=await Promise.all([
+        ids.length?adminClient.from("aevnetwork_team_members").select("team_id,user_id,status,role").in("team_id",ids):Promise.resolve({data:[],error:null}),
+        adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",[...new Set((teams??[]).map((t:any)=>t.owner_id))]),
+        adminClient.from("aevnetwork_team_members").select("team_id,status,role").eq("user_id",userId)
+      ]);
+      if(members.error||profiles.error||mine.error)return respond(500,{error:"teams_details_load_failed"});
+      const names=new Map((profiles.data??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
+      const mineMap=new Map((mine.data??[]).map((m:any)=>[m.team_id,m]));
+      return respond(200,{items:(teams??[]).map((t:any)=>({ ...t,owner_nickname:names.get(t.owner_id)||"ユーザー",
+        member_count:(members.data??[]).filter((m:any)=>m.team_id===t.id&&m.status==="approved").length,
+        my_status:mineMap.get(t.id)?.status||null,my_role:mineMap.get(t.id)?.role||null }))});
+    }
+
+    if (action === "teams_create") {
+      const name=String(body?.name??"").trim(),description=String(body?.description??"").trim(),game=String(body?.game??"").trim();
+      if(name.length<2||name.length>32||description.length>1000||game.length>60)return respond(400,{error:"invalid_team"});
+      const {data:team,error}=await adminClient.from("aevnetwork_teams").insert({name,description,game,owner_id:userId}).select("id").single();
+      if(error)return respond(400,{error:"team_create_failed",detail:error.message});
+      const {error:memberError}=await adminClient.from("aevnetwork_team_members").insert({team_id:team.id,user_id:userId,role:"leader",status:"approved",reviewed_at:new Date().toISOString()});
+      if(memberError){await adminClient.from("aevnetwork_teams").delete().eq("id",team.id);return respond(500,{error:"team_owner_setup_failed"});}
+      return respond(200,{created:true,team_id:team.id});
+    }
+
+    if (action === "teams_apply") {
+      const teamId=String(body?.team_id??"");
+      if(!teamId)return respond(400,{error:"invalid_team_id"});
+      const {data:team}=await adminClient.from("aevnetwork_teams").select("id").eq("id",teamId).maybeSingle();
+      if(!team)return respond(404,{error:"team_not_found"});
+      const {data:existing}=await adminClient.from("aevnetwork_team_members").select("id,status").eq("team_id",teamId).eq("user_id",userId).maybeSingle();
+      if(existing&&existing.status!=="rejected")return respond(409,{error:"team_application_exists"});
+      const result=existing
+        ?await adminClient.from("aevnetwork_team_members").update({status:"pending",role:"member",created_at:new Date().toISOString(),reviewed_at:null}).eq("id",existing.id)
+        :await adminClient.from("aevnetwork_team_members").insert({team_id:teamId,user_id:userId,role:"member",status:"pending"});
+      if(result.error)return respond(500,{error:"team_apply_failed"});
+      return respond(200,{applied:true});
+    }
+
+    if (action === "teams_my") {
+      const {data:members,error}=await adminClient.from("aevnetwork_team_members")
+        .select("team_id,user_id,role,status,created_at,reviewed_at").eq("user_id",userId).order("created_at",{ascending:false});
+      if(error)return respond(500,{error:"my_teams_load_failed"});
+      const ids=(members??[]).map((m:any)=>m.team_id);
+      const {data:teams,error:teamsError}=ids.length?await adminClient.from("aevnetwork_teams")
+        .select("id,name,description,game,owner_id,created_at").in("id",ids):{data:[],error:null};
+      if(teamsError)return respond(500,{error:"my_teams_load_failed"});
+      const byId=new Map((teams??[]).map((t:any)=>[t.id,t]));
+      return respond(200,{items:(members??[]).map((m:any)=>({...m,team:byId.get(m.team_id)})).filter((m:any)=>m.team)});
+    }
+
+    if (action === "teams_members") {
+      const teamId=String(body?.team_id??"");
+      const {data:team}=await adminClient.from("aevnetwork_teams").select("id,owner_id").eq("id",teamId).maybeSingle();
+      if(!team)return respond(404,{error:"team_not_found"});
+      const {data:mine}=await adminClient.from("aevnetwork_team_members").select("status,role").eq("team_id",teamId).eq("user_id",userId).maybeSingle();
+      if(!mine||mine.status!=="approved")return respond(403,{error:"team_membership_required"});
+      const {data:rows,error}=await adminClient.from("aevnetwork_team_members")
+        .select("id,user_id,role,status,created_at").eq("team_id",teamId).order("created_at",{ascending:true});
+      if(error)return respond(500,{error:"team_members_load_failed"});
+      const ids=[...new Set((rows??[]).map((m:any)=>m.user_id))];
+      const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
+      const names=new Map((profiles??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
+      return respond(200,{is_leader:team.owner_id===userId,items:(rows??[]).map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー"}))});
+    }
+
+    if (action === "teams_review") {
+      const memberId=String(body?.member_id??""),decision=String(body?.decision??"");
+      if(!memberId||!["approved","rejected"].includes(decision))return respond(400,{error:"invalid_team_review"});
+      const {data:membership}=await adminClient.from("aevnetwork_team_members").select("id,team_id,status")
+        .eq("id",memberId).maybeSingle();
+      if(!membership)return respond(404,{error:"team_application_not_found"});
+      const {data:team}=await adminClient.from("aevnetwork_teams").select("owner_id").eq("id",membership.team_id).maybeSingle();
+      if(!team||team.owner_id!==userId)return respond(403,{error:"team_leader_required"});
+      if(membership.status!=="pending")return respond(409,{error:"application_already_reviewed"});
+      const {error}=await adminClient.from("aevnetwork_team_members").update({status:decision,reviewed_at:new Date().toISOString()}).eq("id",memberId);
+      if(error)return respond(500,{error:"team_review_failed"});
+      return respond(200,{reviewed:true});
+    }
+
+    if (action === "teams_chat_list" || action === "teams_chat_send") {
+      const teamId=String(body?.team_id??"");
+      if(!teamId)return respond(400,{error:"invalid_team_id"});
+      const {data:membership}=await adminClient.from("aevnetwork_team_members").select("status")
+        .eq("team_id",teamId).eq("user_id",userId).maybeSingle();
+      if(!membership||membership.status!=="approved")return respond(403,{error:"team_chat_members_only"});
+      if(action==="teams_chat_send"){
+        const message=String(body?.body??"").trim();
+        if(!message||message.length>2000)return respond(400,{error:"invalid_team_message"});
+        const {error}=await adminClient.from("aevnetwork_team_messages").insert({team_id:teamId,user_id:userId,body:message});
+        if(error)return respond(500,{error:"team_message_send_failed"});
+        return respond(200,{sent:true});
+      }
+      const {data:messages,error}=await adminClient.from("aevnetwork_team_messages")
+        .select("id,user_id,body,created_at").eq("team_id",teamId).order("created_at",{ascending:false}).limit(100);
+      if(error)return respond(500,{error:"team_chat_load_failed"});
+      const ids=[...new Set((messages??[]).map((m:any)=>m.user_id))];
+      const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
+      const names=new Map((profiles??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
+      return respond(200,{items:(messages??[]).reverse().map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",mine:m.user_id===userId}))});
+    }
+
+    if (action === "teams_leave") {
+      const teamId=String(body?.team_id??"");
+      const {data:team}=await adminClient.from("aevnetwork_teams").select("owner_id").eq("id",teamId).maybeSingle();
+      if(!team)return respond(404,{error:"team_not_found"});
+      if(team.owner_id===userId)return respond(400,{error:"leader_cannot_leave"});
+      const {error}=await adminClient.from("aevnetwork_team_members").delete().eq("team_id",teamId).eq("user_id",userId);
+      if(error)return respond(500,{error:"team_leave_failed"});
+      return respond(200,{left:true});
+    }
+
     if (action === "community_create_post") {
       const title = String(body?.title ?? "").trim();
       const content = String(body?.body ?? "").trim();
