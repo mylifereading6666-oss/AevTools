@@ -1,0 +1,28 @@
+name: Sync FNJPNews feeds
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sync-fnjpnews-feeds
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate sync secret
+        env:
+          SYNC_SECRET: ${{ secrets.FORTNITE_FEED_SYNC_SECRET }}
+        run: test -n "$SYNC_SECRET" || { echo "Missing FORTNITE_FEED_SYNC_SECRET repository secret"; exit 1; }
+      - name: Fetch FNJPNews pages and sync
+        env:
+          SYNC_SECRET: ${{ secrets.FORTNITE_FEED_SYNC_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "x-sync-secret: $SYNC_SECRET" \
+            --data '{"mode":"fnjp"}' \
+            "https://vuqbbwdojwmtehgsyfaq.supabase.co/functions/v1/fortnite-feed-sync"
