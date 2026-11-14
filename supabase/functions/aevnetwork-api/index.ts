@@ -353,7 +353,7 @@ Deno.serve(async (req: Request) => {
         return respond(400, { error: "invalid_content" });
       if (kind === "news") record.category = String(item.category ?? "GAMING").trim().slice(0, 40) || "GAMING";
       if (kind !== "announcements") record.published = item.published !== false;
-      if (kind === "announcements") {
+      if (kind === "announcements" && item.video_url !== undefined) {
         const video = String(item.video_url ?? "").trim();
         if (video && !/^https?:\/\//i.test(video)) return respond(400, { error: "invalid_video_url" });
         record.video_url = video || null;
