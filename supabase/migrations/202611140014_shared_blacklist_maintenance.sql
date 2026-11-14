@@ -93,3 +93,25 @@ revoke all on function public.aevtools_get_service_maintenance() from public;
 grant execute on function public.aevtools_get_service_maintenance() to anon, authenticated;
 revoke all on function public.aevtools_set_service_maintenance(boolean) from public;
 grant execute on function public.aevtools_set_service_maintenance(boolean) to authenticated;
+
+-- Prevent support submission/replies through direct RPC calls during maintenance.
+create or replace function public.aevtools_block_support_writes_during_maintenance()
+returns trigger language plpgsql security definer set search_path=public
+as $$
+begin
+  if public.aevtools_get_service_maintenance()
+     and not exists(select 1 from public.aevtools_admin where user_id=auth.uid()) then
+    raise exception 'service_maintenance';
+  end if;
+  return NEW;
+end $$;
+
+drop trigger if exists aevtools_support_ticket_maintenance_guard on public.aevtools_support_tickets;
+create trigger aevtools_support_ticket_maintenance_guard
+before insert or update on public.aevtools_support_tickets
+for each row execute function public.aevtools_block_support_writes_during_maintenance();
+
+drop trigger if exists aevtools_support_reply_maintenance_guard on public.aevtools_support_replies;
+create trigger aevtools_support_reply_maintenance_guard
+before insert on public.aevtools_support_replies
+for each row execute function public.aevtools_block_support_writes_during_maintenance();
