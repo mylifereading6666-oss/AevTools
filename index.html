@@ -1379,7 +1379,7 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   const active=maintenance&&!isAdmin&&!isTestHelper&&document.querySelector('.page.active')?.id!=='page-account';
   document.body.classList.toggle('maintenance-lock',active);
   if(!active){el?.remove();return;}
-  if(!el){el=document.createElement('div');el.id='toolsMaintenanceOverlay';el.className='service-maintenance-overlay';el.innerHTML='<div class="service-maintenance-card"><div style="font-size:2rem">🛠️</div><h2>ただいまメンテナンス中です</h2><p>AevTools・AevNetworkの機能を一時停止しています。作業完了までしばらくお待ちください。</p><p class="muted">管理者・テスト補助者はテストのため通常どおり利用できます。</p><a class="btn primary" href="#" data-page="account" style="display:inline-block;margin-top:12px;text-decoration:none">ログイン・アカウント</a></div>';document.body.append(el);}
+  if(!el){el=document.createElement('div');el.id='toolsMaintenanceOverlay';el.className='service-maintenance-overlay';el.innerHTML='<div class="service-maintenance-card"><div style="font-size:2rem">🛠️</div><h2>ただいまメンテナンス中です</h2><p>AevTools・AevNetworkの機能を一時停止しています。作業完了までしばらくお待ちください。</p><p class="muted">管理者・テスト補助者はテストのため通常どおり利用できます。</p><a class="btn primary" href="#" data-page="account" style="display:inline-block;margin-top:12px;text-decoration:none">ログイン・アカウント</a></div>';el.querySelector('[data-page="account"]')?.addEventListener('click',e=>{e.preventDefault();showPage('account');gate();});document.body.append(el);}
  }
  async function updateTestHelperClaim(){
   const panel=$('toolsTestHelperClaimPanel'),input=$('toolsTestHelperClaimInput'),button=$('toolsTestHelperClaimButton'),status=$('toolsTestHelperClaimStatus');
