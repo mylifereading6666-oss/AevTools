@@ -178,9 +178,9 @@ Deno.serve(async (req: Request) => {
         created_by: userId,
         updated_at: new Date().toISOString()
       };
-      if (!record.title || String(record.title).length > 160 || String(record.body).length > 10000)
+      if (!record.title || String(record.title).length > 160 || String(record.body).length > (kind === "announcements" ? 6000 : 10000))
         return respond(400, { error: "invalid_content" });
-      if (kind === "news") record.category = String(item.category ?? "GAMING").slice(0, 40);
+      if (kind === "news") record.category = String(item.category ?? "GAMING").trim().slice(0, 40) || "GAMING";
       if (kind !== "announcements") record.published = item.published !== false;
       if (kind === "announcements" || kind === "news") {
         const link = String(item.link_url ?? "").trim();
