@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
       let query = adminClient.from(table).select("*").order("created_at", { ascending: false }).limit(100);
       if (kind !== "announcements") query = query.eq("published", true);
       const { data, error } = await query;
-      if (error) return respond(500, { error: "content_load_failed" });
+      if (error) return respond(500, { error: "content_load_failed", detail: error.message, code: error.code, hint: error.hint });
       return respond(200, { items: data ?? [] });
     }
 
