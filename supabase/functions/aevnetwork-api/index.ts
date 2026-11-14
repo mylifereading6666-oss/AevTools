@@ -464,6 +464,10 @@ Deno.serve(async (req: Request) => {
       const {data:team}=await adminClient.from("aevnetwork_teams").select("id,owner_id").eq("id",teamId).maybeSingle();
       if(!team)return respond(404,{error:"team_not_found"});
       if(team.owner_id!==userId)return respond(403,{error:"team_leader_required"});
+      const {count:approvedCount,error:countError}=await adminClient.from("aevnetwork_team_members")
+        .select("id",{count:"exact",head:true}).eq("team_id",teamId).eq("status","approved");
+      if(countError)return respond(500,{error:"team_capacity_check_failed"});
+      if((approvedCount??0)>=4)return respond(409,{error:"team_full"});
       // The UNIQUE constraint on invite_code_hash is the final authority:
       // even if two leaders generate codes at the same time, duplicate codes
       // cannot be stored. Retry on unique-violation and return only after save.
@@ -678,8 +682,41 @@ Deno.serve(async (req: Request) => {
       return respond(200,{requested:true});
     }
 
-    if (action === "teams_admin_list" || action === "teams_admin_mediation_list" || action === "teams_admin_mediation_approve" || action === "teams_admin_chat_list") {
+    if (action === "teams_admin_list" || action === "teams_admin_mediation_list" || action === "teams_admin_mediation_approve" || action === "teams_admin_chat_list" || action === "teams_admin_user_search" || action === "teams_admin_add_member") {
       if(!isAdmin)return respond(403,{error:"admin_required"});
+      if(action==="teams_admin_user_search"){
+        const query=String(body?.query??"").trim();
+        if(query.length<2||query.length>80)return respond(400,{error:"invalid_user_search"});
+        const {data,error}=await adminClient.from("aevtools_profiles")
+          .select("user_id,nickname").ilike("nickname","%"+query.replace(/[%_\\]/g,"\\    if (action === "teams_admin_list" || action === "teams_admin_mediation_list" || action === "teams_admin_mediation_approve" || action === "teams_admin_chat_list") {
+      if(!isAdmin)return respond(403,{error:"admin_required"});
+      if(action==="teams_admin_list"){")+"%")
+          .order("nickname",{ascending:true}).limit(20);
+        if(error)return respond(500,{error:"admin_user_search_failed"});
+        return respond(200,{items:data??[]});
+      }
+      if(action==="teams_admin_add_member"){
+        const teamId=String(body?.team_id??"");
+        const targetUserId=String(body?.target_user_id??"");
+        const context=String(body?.context??"");
+        const reason=String(body?.reason??"").trim();
+        const mediationRequestId=body?.mediation_request_id?String(body.mediation_request_id):null;
+        const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if(!uuid.test(teamId)||!uuid.test(targetUserId)||!["audit","mediation"].includes(context)||reason.length<5||reason.length>1000)return respond(400,{error:"invalid_admin_add_request"});
+        if(context==="mediation"&&!mediationRequestId)return respond(400,{error:"approved_mediation_required"});
+        if(context==="audit"&&mediationRequestId)return respond(400,{error:"invalid_mediation_request"});
+        const {data,error}=await adminClient.rpc("aevnetwork_admin_add_team_member",{
+          p_admin_user_id:userId,p_team_id:teamId,p_target_user_id:targetUserId,
+          p_context:context,p_reason:reason,p_mediation_request_id:mediationRequestId
+        });
+        if(error){
+          const msg=error.message||"";
+          const known=["admin_required","team_not_found","target_user_not_found","approved_mediation_required","already_team_member","team_full","admin_add_reason_required","invalid_admin_add_context"];
+          const code=known.find(x=>msg.includes(x));
+          return respond(code==="admin_required"?403:code==="team_not_found"||code==="target_user_not_found"?404:code?409:500,{error:code||"admin_team_add_failed"});
+        }
+        return respond(200,{added:true,audit_id:data?.audit_id??null});
+      }
       if(action==="teams_admin_list"){
         const {data:teams,error}=await adminClient.from("aevnetwork_teams").select("id,name,owner_id,created_at").order("created_at",{ascending:false}).limit(200);
         if(error)return respond(500,{error:"admin_teams_load_failed"});
