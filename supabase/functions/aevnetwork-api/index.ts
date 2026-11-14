@@ -55,6 +55,22 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === "refresh") {
+      const refreshToken = String(body?.refresh_token ?? "");
+      if (!refreshToken) return respond(400, { error: "missing_refresh_token" });
+      const { data, error } = await authClient.auth.refreshSession({ refresh_token: refreshToken });
+      if (error || !data.session || !data.user) return respond(401, { error: "session_refresh_failed" });
+      return respond(200, {
+        session: {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at,
+          token_type: data.session.token_type,
+          user: { id: data.user.id, email: data.user.email },
+        },
+      });
+    }
+
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!token) return respond(401, { error: "missing_session" });
