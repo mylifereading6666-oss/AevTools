@@ -910,6 +910,19 @@ function applySharedProfile(data){
  document.documentElement.dataset.profileTheme=d.theme||'midnight';
  document.documentElement.dataset.profileFont=d.font_style||'default';
 }
+function setAevNicknameLock(changedAt){
+ const input=$('profileNickname'),status=$('profileNicknameStatus');if(!input)return;
+ const changed=changedAt?new Date(changedAt):null,unlock=changed?changed.getTime()+14*24*60*60*1000:0;
+ const update=()=>{
+  const locked=!!changed&&Date.now()<unlock;
+  input.disabled=locked;
+  input.title=locked?'ニックネーム変更可能期間まで編集できません。':'';
+  if(locked&&status)status.textContent='ニックネーム変更は14日ごとです。次回変更可能：'+new Date(unlock).toLocaleString('ja-JP');
+  else if(status&&status.textContent.startsWith('ニックネーム変更は14日ごとです。'))status.textContent='ニックネームを変更できます。';
+  if(locked)setTimeout(update,Math.min(unlock-Date.now()+50,2147483000));
+ };
+ update();
+}
 async function refreshAevProfile(){
  if(!supabaseClient)return;
  const {data:{session}}=await supabaseClient.auth.getSession();
@@ -919,6 +932,7 @@ async function refreshAevProfile(){
  if(error){if(panel){panel.hidden=false;$('profileNicknameStatus').textContent='プロフィールSQLを実行してください。'}return}
  aevCurrentProfile=data;
  const d=data.profile||{};
+ setAevNicknameLock(data.nickname_changed_at);
  if(panel){panel.hidden=false;$('profileNickname').value=data.nickname||'';$('profileRoleLabel').innerHTML='';if(data.role_label){const badge=document.createElement('span');badge.className='profile-role';badge.textContent=data.role_label;$('profileRoleLabel').append(badge)}else $('profileRoleLabel').textContent='一般ユーザー';$('sharedBio').value=d.bio||'';$('sharedGame').value=d.favorite_game||'';$('sharedPlayStyle').value=d.play_style||'';$('sharedAvatar').value=d.avatar_url||'';$('sharedBanner').value=d.banner_url||'';$('sharedAccent').value=d.accent_color||'#8b7cff';$('sharedNameColor').value=d.name_color||'#ffffff';$('sharedTheme').value=d.theme||'midnight';$('sharedNameEffect').value=d.name_effect||'glow';$('sharedFont').value=d.font_style||'default';}
  applySharedProfile(data);
 }
