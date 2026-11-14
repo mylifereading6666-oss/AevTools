@@ -23,9 +23,9 @@ alter table public.aevnetwork_news alter column created_by drop not null;
 alter table public.aevnetwork_updates alter column created_by drop not null;
 
 create unique index if not exists aevnetwork_news_source_url_uidx
-  on public.aevnetwork_news(source_url) where source_url is not null;
+  on public.aevnetwork_news(source_url);
 create unique index if not exists aevnetwork_updates_source_url_uidx
-  on public.aevnetwork_updates(source_url) where source_url is not null;
+  on public.aevnetwork_updates(source_url);
 create index if not exists aevnetwork_news_source_id_idx
   on public.aevnetwork_news(source_id) where source_id is not null;
 create index if not exists aevnetwork_updates_source_id_idx
