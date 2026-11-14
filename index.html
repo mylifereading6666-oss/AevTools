@@ -256,12 +256,11 @@ table{max-width:100%;display:block;overflow-x:auto}
 <button class="btn" id="toolsToggleMaintenance" type="button">状態を読み込み中…</button>
 </div>
 <div class="panel" id="toolsTestHelperPanel" style="margin:12px 0">
-<h4>🧪 テスト補助ユーザーの永久割り当て</h4>
-<p class="muted">管理者以外の登録ユーザーを1人だけ指定できます。割り当て後は変更・解除できません。テスト補助ユーザーはメンテナンス中も一般機能を利用できますが、管理者機能は使えません。</p>
-<p id="toolsTestHelperStatus" class="muted">割り当て状態を確認しています…</p>
-<label for="toolsTestHelperUser">テスト補助ユーザー</label>
-<select class="field" id="toolsTestHelperUser"><option value="">ユーザー一覧を読み込み中…</option></select>
-<button class="btn primary" id="toolsAssignTestHelper" type="button">このユーザーを永久に割り当てる</button>
+<h4>🧪 テスト補助ユーザー登録コード</h4>
+<p class="muted">管理者が一度だけ専用コードを発行できます。最初に登録した一般ユーザー1人だけが永久に対象になります。</p>
+<p id="toolsTestHelperStatus" class="muted">登録状態を確認しています…</p>
+<button class="btn primary" id="toolsGenerateTestHelperCode" type="button">専用コードを発行する</button>
+<div id="toolsTestHelperCodeResult" hidden><label for="toolsTestHelperCodeValue">発行コード（この画面を閉じる前に共有してください）</label><input class="field" id="toolsTestHelperCodeValue" readonly><button class="btn" id="toolsCopyTestHelperCode" type="button">コードをコピー</button></div>
 </div>
 <div class="row"><button class="btn primary" id="runDiagnostics">ブラウザー診断を実行</button><button class="btn" id="downloadDebugReport">診断レポートを保存</button><button class="btn" id="refreshAdminTickets">サポート一覧を更新</button></div>
 <div id="diagnosticResults" class="panel" style="margin-top:12px">診断はまだ実行されていません。</div><h3>サポートリクエスト管理</h3><button class="btn" data-page="admin-cancelled">キャンセル済みリクエスト専用ページを開く</button><div id="adminSupportList" class="muted">一覧を読み込んでください。</div><p class="muted">診断はこのブラウザー内の情報のみを確認します。サーバーのログや他ユーザーの端末情報は取得しません。</p></div><div class="panel" id="adminClaimPanel" style="margin-top:16px"><h3>🔐 開発者・管理者モード</h3><p class="muted">管理者登録は永久に1アカウントのみです。ログアウトしても管理者枠は解除されません。</p><div id="adminClaimStatus" class="muted">管理者状態を確認しています…</div><div id="adminClaimForm" hidden><label for="adminClaimCode">管理者登録コード（8文字）</label><input class="field" id="adminClaimCode" maxlength="8" autocomplete="off" placeholder="8文字の大文字コード"><button class="btn primary" id="adminClaimSubmit">このアカウントを管理者に登録</button></div><p id="adminClaimMessage" class="muted" aria-live="polite"></p></div>
@@ -1403,28 +1402,24 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   }
  }
  async function loadToolsTestHelper(){
-  const status=$('toolsTestHelperStatus'),select=$('toolsTestHelperUser'),button=$('toolsAssignTestHelper');
-  if(!status||!select||!button||!isAdmin)return;
+  const status=$('toolsTestHelperStatus'),button=$('toolsGenerateTestHelperCode'),result=$('toolsTestHelperCodeResult');
+  if(!status||!button||!isAdmin)return;
   try{
-   const [assigned,users,currentSession]=await Promise.all([aevSharedApiCall('admin_test_helper_get'),aevSharedApiCall('admin_list_users',{page:1}),supabaseClient.auth.getSession()]);
-   if(assigned.assigned&&assigned.user){
-    status.textContent='永久割り当て済み：'+(assigned.user.email||assigned.user.id)+'（変更・解除不可）';
-    select.disabled=true;button.disabled=true;return;
-   }
-   const list=users.users||[];
-   select.innerHTML='<option value="">ユーザーを選択</option>'+list.filter(u=>u.id!==currentSession.data?.session?.user?.id).map(u=>'<option value="'+aevEscShared(u.id)+'">'+aevEscShared(u.email||u.id)+'</option>').join('');
-   status.textContent='未割り当てです。登録ユーザーを1人だけ選択できます。';
-  }catch(e){status.textContent='状態を取得できません：'+e.message;select.disabled=true;button.disabled=true;}
+   const r=await aevSharedApiCall('admin_test_helper_get');
+   if(r.assigned){status.textContent='テスト補助ユーザー登録済みです。変更・解除はできません。';button.disabled=true;if(result)result.hidden=true;}
+   else if(r.code_ready){status.textContent='コードは発行済みです。再発行できません。登録を待っています。';button.disabled=true;}
+   else{status.textContent='未発行です。コードは一度だけ発行できます。';button.disabled=false;}
+  }catch(e){status.textContent='状態を取得できません：'+e.message;button.disabled=true;}
  }
- $('toolsAssignTestHelper')?.addEventListener('click',async()=>{
-  const select=$('toolsTestHelperUser'),status=$('toolsTestHelperStatus'),button=$('toolsAssignTestHelper'),id=select?.value;
-  if(!id){status.textContent='ユーザーを選択してください。';return;}
-  const label=select.selectedOptions?.[0]?.textContent||id;
-  if(!confirm('「'+label+'」を永久にテスト補助ユーザーとして割り当てます。後から変更・解除できません。よろしいですか？'))return;
+ $('toolsGenerateTestHelperCode')?.addEventListener('click',async()=>{
+  const button=$('toolsGenerateTestHelperCode'),status=$('toolsTestHelperStatus'),result=$('toolsTestHelperCodeResult');
+  if(!confirm('テスト補助ユーザー登録コードを一度だけ発行します。発行後の再発行はできません。続行しますか？'))return;
   button.disabled=true;
-  try{const r=await aevSharedApiCall('admin_test_helper_assign',{user_id:id});status.textContent='永久割り当て完了：'+(r.user?.email||id)+'。変更・解除はできません。';select.disabled=true;}
-  catch(e){status.textContent=e.message==='test_helper_already_assigned'?'すでに別のユーザーが割り当てられています。':'割り当てできませんでした：'+e.message;button.disabled=false;}
+  try{const r=await aevSharedApiCall('admin_test_helper_generate_code');$('toolsTestHelperCodeValue').value=r.code;result.hidden=false;status.textContent='コードを発行しました。対象者に安全な方法で共有してください。';}
+  catch(e){status.textContent='発行できませんでした：'+e.message;button.disabled=false;}
  });
+ $('toolsCopyTestHelperCode')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('toolsTestHelperCodeValue').value);$('toolsTestHelperStatus').textContent='コードをコピーしました。';}catch(e){$('toolsTestHelperStatus').textContent='コピーできません。コードを長押ししてコピーしてください。'}});
+
  $('toolsToggleMaintenance')?.addEventListener('click',async()=>{
   if(!isAdmin)return;const btn=$('toolsToggleMaintenance');btn.disabled=true;
   try{const {error}=await window.__aevMaintenanceClient.rpc('aevtools_set_service_maintenance',{p_enabled:!maintenance});if(error)throw error;await updateMaintenance();}
