@@ -35,10 +35,12 @@ POST JSON to `https://vuqbbwdojwmtehgsyfaq.supabase.co/functions/v1/aevnetwork-a
 - `{ "action": "save_data", "data": { ... } }` with the same bearer token
   saves only that user's AevNetwork data.
 
-The login endpoint currently supports existing-account sign-in only.
-Registration, password recovery, token refresh, logout UI, profile fields,
-and username cooldown enforcement are later integration tasks. Do not claim
-those features are active until implemented and tested.
+The login endpoint currently supports existing-account sign-in only. AevNetwork
+has a basic profile display-name field, local account-scoped cache, automatic
+cloud save, manual save, logout-after-save, and refresh-token renewal. New
+account registration, password recovery, and server-enforced username cooldown
+remain later integration tasks. Do not claim those features are active until
+implemented and tested.
 
 ## Important
 
