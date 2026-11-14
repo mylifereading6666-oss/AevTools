@@ -230,7 +230,7 @@ Deno.serve(async (req: Request) => {
       const ids=[...new Set((rows??[]).map((m:any)=>m.user_id))];
       const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
       const names=new Map((profiles??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
-      return respond(200,{is_leader:team.owner_id===userId,items:(rows??[]).map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー"}))});
+      const isLeader=team.owner_id===userId; return respond(200,{is_leader:isLeader,items:(rows??[]).filter((m:any)=>isLeader||m.status==="approved").map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー"}))});
     }
 
     if (action === "teams_review") {
