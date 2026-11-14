@@ -79,6 +79,16 @@ Deno.serve(async (req: Request) => {
     if (authError || !authData.user) return respond(401, { error: "invalid_session" });
     const userId = authData.user.id;
 
+    if (action === "is_admin") {
+      // Reuse AevTools' single permanent administrator registry.
+      // The database RPC is the authority; never trust a browser-supplied role.
+      const { data, error } = await adminClient.rpc("aevtools_is_admin", {}, {
+        head: false,
+      });
+      if (error) return respond(500, { error: "admin_check_failed" });
+      return respond(200, { is_admin: data === true });
+    }
+
     if (action === "get_data") {
       const { data, error } = await adminClient
         .from("aevnetwork_user_data")
