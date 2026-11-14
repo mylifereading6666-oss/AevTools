@@ -1,39 +1,29 @@
 # AevTools
 
-AevTools is a responsive, browser-based Japanese productivity toolkit that brings five tools together:
+AevTools is a responsive browser-based productivity toolkit for mobile, tablet, and desktop.
 
-- **AevTask** — task list, due dates, priority, and completion checkboxes
-- **AevTools** — character counter, QR code creation, image resizing, JSON formatting, and password generation
-- **AevFocus** — Pomodoro timer, study-time logs, and daily goals
-- **AevMoney** — allowance income/expense tracking, category labels, and monthly budget
-- **AevMemo** — notes, tags, search, and favorites
-- **Email reports** — automatically summarize saved task, study, money, and memo data, then open the configured email app with the subject and body prefilled
+## Main modules
+- **AevTask** — tasks, due dates, priorities, completion status
+- **AevTools** — character count, QR generation, image resizing, JSON formatting, password generation
+- **AevFocus** — focus/break timer, study records, daily goals
+- **AevMoney** — income/expense records, categories, monthly budget tracking
+- **AevMemo** — notes, tags, search, favorites
+- **Shared account/profile** — Supabase-backed authentication and profile shared with AevNetwork
 
-## Use the site
+## Use
+Open the deployed [AevTools website](https://mylifereading6666-oss.github.io/AevTools/). Use the three-line menu to switch modules. Sign in or register to use account-based features. Nickname changes are limited to once per 14 days; other profile settings can be edited separately.
 
-Open the deployed site and use the ☰ menu to switch between sections. The home page includes tool introductions and a getting-started guide. The YouTube channel link is fixed to Aev0rnJP.
-
-## Run locally
-
-Download or clone the repository, then open `index.html` in a modern browser. No build step or server is required.
-
-## GitHub Pages
-
-This repository includes a GitHub Actions workflow at `.github/workflows/pages.yml`.
-
-1. Open **Settings → Pages** in the repository.
-2. Under **Build and deployment → Source**, select **GitHub Actions**.
-3. Push to `main` or manually run **Deploy AevTools to GitHub Pages** from the Actions tab.
-4. After the workflow succeeds, open the Pages URL shown in the deployment.
+## Documentation
+- [Privacy Policy](privacy-policy.html)
+- [Terms of Use](terms.html)
+- [Specifications and User Guide](guide.html)
+- [MIT License](LICENSE)
 
 ## Data and privacy
+Some utility records and preferences are stored in browser storage and may not sync between browsers/devices. Shared account and profile data are handled through Supabase. Clearing site data may remove local records or the saved login state. Email report links only open the user's configured email app with a prefilled draft; the user reviews and sends it. External QR generation and Google/YouTube features may involve third-party services.
 
-Task, study, money, memo, and settings are stored in the browser's local storage. They are not synchronized between devices or browsers. Clearing browser data may remove them. Do not store sensitive information.
+## Development and deployment
+This is a static-first website hosted with GitHub Pages. Open `index.html` for a local preview where supported. Configure GitHub Pages to use the repository's Actions workflow as documented in repository settings.
 
-Email reports are generated in the browser from saved data. The site uses a `mailto:` link to open your configured email app; you review and send the message yourself. No email is sent automatically by the website. Email-app support and maximum message length vary by device. Avoid emailing sensitive data.
-
-QR generation loads an external QR service, and the YouTube link opens the URL you enter. Avoid entering private data into QR content.
-
-## License
-
-This project is intended to use the **MIT License**. See [LICENSE](LICENSE). Third-party services and libraries retain their own terms.
+## Related service
+[AevNetwork](https://mylifereading6666-oss.github.io/AevNetwork/) shares the account/profile system. Each service maintains its own announcements and service-specific features.
