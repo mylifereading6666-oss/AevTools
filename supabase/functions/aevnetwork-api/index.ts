@@ -79,7 +79,148 @@ Deno.serve(async (req: Request) => {
     if (authError || !authData.user) return respond(401, { error: "invalid_session" });
     const userId = authData.user.id;
 
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { data: adminFlag, error: adminFlagError } = await userClient.rpc("aevtools_is_admin");
+    const isAdmin = !adminFlagError && adminFlag === true;
+
     if (action === "is_admin") {
+      if (adminFlagError) return respond(500, { error: "admin_check_failed" });
+      return respond(200, { is_admin: isAdmin });
+    }
+
+    // AevNetwork blacklist is scoped to this service only. It never disables
+    // the shared Supabase Auth account or access to AevTools.
+    const { data: blockedRow, error: blockedError } = await adminClient
+      .from("aevnetwork_blacklist").select("reason").eq("user_id", userId).maybeSingle();
+    if (blockedError) return respond(500, { error: "blacklist_check_failed" });
+    if (blockedRow && !isAdmin) return respond(403, { error: "aevnetwork_restricted", reason: blockedRow.reason });
+
+    if (action === "admin_dashboard") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const [users, announcements, news, updates, blacklist] = await Promise.all([
+        adminClient.auth.admin.listUsers({ page: 1, perPage: 1 }),
+        adminClient.from("aevnetwork_announcements").select("id", { count: "exact", head: true }),
+        adminClient.from("aevnetwork_news").select("id", { count: "exact", head: true }),
+        adminClient.from("aevnetwork_updates").select("id", { count: "exact", head: true }),
+        adminClient.from("aevnetwork_blacklist").select("user_id", { count: "exact", head: true }),
+      ]);
+      if (users.error || announcements.error || news.error || updates.error || blacklist.error)
+        return respond(500, { error: "dashboard_load_failed" });
+      return respond(200, { metrics: {
+        users: users.data?.users?.length === 0 ? 0 : (users.data as any)?.total ?? null,
+        announcements: announcements.count ?? 0, news: news.count ?? 0,
+        updates: updates.count ?? 0, blacklist: blacklist.count ?? 0
+      }});
+    }
+
+    if (action === "admin_list_users") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const page = Math.max(1, Math.min(100, Number(body?.page) || 1));
+      const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage: 100 });
+      if (error) return respond(500, { error: "users_load_failed" });
+      return respond(200, { users: data.users.map((u: any) => ({
+        id: u.id, email: u.email ?? "", created_at: u.created_at ?? null,
+        last_sign_in_at: u.last_sign_in_at ?? null
+      })), page });
+    }
+
+    const contentTables: Record<string, string> = {
+      announcements: "aevnetwork_announcements",
+      news: "aevnetwork_news",
+      updates: "aevnetwork_updates"
+    };
+    if (action === "admin_list_content" || action === "public_list_content") {
+      const kind = String(body?.kind ?? "");
+      const table = contentTables[kind];
+      if (!table) return respond(400, { error: "invalid_content_kind" });
+      if (action === "admin_list_content" && !isAdmin) return respond(403, { error: "admin_required" });
+      let query = adminClient.from(table).select("*").order("created_at", { ascending: false }).limit(100);
+      if (action === "public_list_content") query = query.eq("published", true);
+      const { data, error } = await query;
+      if (error) return respond(500, { error: "content_load_failed" });
+      return respond(200, { items: data ?? [] });
+    }
+
+    if (action === "admin_save_content") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const kind = String(body?.kind ?? "");
+      const table = contentTables[kind];
+      if (!table) return respond(400, { error: "invalid_content_kind" });
+      const item = body?.item;
+      if (!item || typeof item !== "object") return respond(400, { error: "invalid_content" });
+      const record: Record<string, unknown> = {
+        title: String(item.title ?? "").trim(),
+        body: String(item.body ?? ""),
+        created_by: userId,
+        updated_at: new Date().toISOString()
+      };
+      if (!record.title || String(record.title).length > 160 || String(record.body).length > 10000)
+        return respond(400, { error: "invalid_content" });
+      if (kind === "news") record.category = String(item.category ?? "GAMING").slice(0, 40);
+      if (kind !== "announcements") record.published = item.published !== false;
+      if (kind === "announcements" || kind === "news") {
+        const link = String(item.link_url ?? "").trim();
+        if (link && !/^https:\/\//i.test(link)) return respond(400, { error: "invalid_link" });
+        record.link_url = link || null;
+      }
+      const id = String(item.id ?? "");
+      const result = id
+        ? await adminClient.from(table).update(record).eq("id", id).select().single()
+        : await adminClient.from(table).insert(record).select().single();
+      if (result.error) return respond(500, { error: "content_save_failed" });
+      return respond(200, { item: result.data });
+    }
+
+    if (action === "admin_delete_content") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const kind = String(body?.kind ?? "");
+      const table = contentTables[kind];
+      const id = String(body?.id ?? "");
+      if (!table || !id) return respond(400, { error: "invalid_content_target" });
+      const { error } = await adminClient.from(table).delete().eq("id", id);
+      if (error) return respond(500, { error: "content_delete_failed" });
+      return respond(200, { deleted: true });
+    }
+
+    if (action === "admin_list_blacklist") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const { data, error } = await adminClient.from("aevnetwork_blacklist")
+        .select("user_id, reason, created_at, created_by").order("created_at", { ascending: false });
+      if (error) return respond(500, { error: "blacklist_load_failed" });
+      const { data: authUsers, error: authUsersError } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (authUsersError) return respond(500, { error: "users_load_failed" });
+      const byId = new Map(authUsers.users.map((u: any) => [u.id, u.email ?? ""]));
+      return respond(200, { items: (data ?? []).map((x: any) => ({ ...x, email: byId.get(x.user_id) ?? "" })) });
+    }
+
+    if (action === "admin_add_blacklist") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const targetId = String(body?.user_id ?? "");
+      const reason = String(body?.reason ?? "").trim();
+      if (!targetId || !reason || reason.length > 1000) return respond(400, { error: "invalid_blacklist_entry" });
+      if (targetId === userId) return respond(400, { error: "cannot_blacklist_self" });
+      const { data: target, error: targetError } = await adminClient.auth.admin.getUserById(targetId);
+      if (targetError || !target.user) return respond(404, { error: "user_not_found" });
+      const { error } = await adminClient.from("aevnetwork_blacklist").upsert({
+        user_id: targetId, reason, created_by: userId
+      }, { onConflict: "user_id" });
+      if (error) return respond(500, { error: "blacklist_save_failed" });
+      return respond(200, { saved: true });
+    }
+
+    if (action === "admin_remove_blacklist") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const targetId = String(body?.user_id ?? "");
+      if (!targetId) return respond(400, { error: "invalid_user_id" });
+      const { error } = await adminClient.from("aevnetwork_blacklist").delete().eq("user_id", targetId);
+      if (error) return respond(500, { error: "blacklist_remove_failed" });
+      return respond(200, { removed: true });
+    }
+
+
       // Reuse AevTools' single permanent administrator registry.
       // The database RPC is the authority; never trust a browser-supplied role.
       const userClient = createClient(supabaseUrl, anonKey, {
