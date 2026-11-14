@@ -487,17 +487,21 @@ Deno.serve(async (req: Request) => {
       const code=String(body?.code??"").replace(/\s/g,"");
       if(!/^\d{8}$/.test(code))return respond(400,{error:"invalid_invite_code"});
       const hash=await hashTeamInvite(code);
-      const {data:team}=await adminClient.from("aevnetwork_teams").select("id,name,invite_code_updated_at").eq("invite_code_hash",hash).maybeSingle();
-      if(!team)return respond(404,{error:"invite_code_not_found"});
-      const issuedAt=team.invite_code_updated_at?new Date(team.invite_code_updated_at).getTime():0;
-      if(!issuedAt||!Number.isFinite(issuedAt)||Date.now()-issuedAt>=10*60*1000)return respond(410,{error:"invite_code_expired"});
-      const {data:existing}=await adminClient.from("aevnetwork_team_members").select("id,status,role").eq("team_id",team.id).eq("user_id",userId).maybeSingle();
-      if(existing?.status==="approved"||existing?.role==="leader")return respond(409,{error:"already_team_member"});
-      const result=existing
-        ?await adminClient.from("aevnetwork_team_members").update({status:"approved",role:"member",reviewed_at:new Date().toISOString()}).eq("id",existing.id)
-        :await adminClient.from("aevnetwork_team_members").insert({team_id:team.id,user_id:userId,role:"member",status:"approved",reviewed_at:new Date().toISOString()});
-      if(result.error)return respond(result.error.message.includes("team_full")?409:500,{error:result.error.message.includes("team_full")?"team_full":"team_join_failed"});
-      return respond(200,{joined:true,team_id:team.id,team_name:team.name});
+      const {data,error}=await adminClient.rpc("aevnetwork_redeem_team_invite",{
+        p_code_hash:hash,
+        p_user_id:userId
+      });
+      if(error){
+        const message=error.message||"";
+        if(message.includes("team_full"))return respond(409,{error:"team_full"});
+        if(message.includes("already_team_member"))return respond(409,{error:"already_team_member"});
+        if(message.includes("invite_code_expired"))return respond(410,{error:"invite_code_expired"});
+        if(message.includes("invite_code_used_or_invalid"))return respond(409,{error:"invite_code_used_or_invalid"});
+        return respond(500,{error:"team_join_failed"});
+      }
+      const redeemed=Array.isArray(data)?data[0]:data;
+      if(!redeemed?.team_id)return respond(409,{error:"invite_code_used_or_invalid"});
+      return respond(200,{joined:true,team_id:redeemed.team_id,team_name:redeemed.team_name});
     }
 
     if (action === "teams_list") {
