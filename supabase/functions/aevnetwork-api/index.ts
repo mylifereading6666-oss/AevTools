@@ -147,10 +147,14 @@ Deno.serve(async (req: Request) => {
     if (action === "community_create_post") {
       const title = String(body?.title ?? "").trim();
       const content = String(body?.body ?? "").trim();
-      if (!title || title.length > 160 || !content || content.length > 6000)
+      const imageUrl = String(body?.image_url ?? "").trim();
+      const imagePath = String(body?.image_path ?? "").trim();
+      if (!title || title.length > 160 || !content || content.length > 6000 ||
+          (imageUrl && !/^https:\/\//i.test(imageUrl)) ||
+          (imagePath && !imagePath.startsWith(userId + "/")))
         return respond(400, { error: "invalid_community_post" });
       const { data, error } = await adminClient.from("aevnetwork_community_posts")
-        .insert({ author_id: userId, title, body: content, image_url: String(body?.image_url ?? "") || null, image_path: String(body?.image_path ?? "") || null }).select("id").single();
+        .insert({ author_id: userId, title, body: content, image_url: imageUrl || null, image_path: imagePath || null }).select("id").single();
       if (error) return respond(500, { error: "community_post_create_failed" });
       return respond(200, { created: true, id: data.id });
     }
@@ -288,7 +292,7 @@ Deno.serve(async (req: Request) => {
         if (batch.data.users.length < 1000) break;
       }
       const [announcements, news, updates, blacklist] = await Promise.all([
-        adminClient.from("aevnetwork_announcements").select("id", { count: "exact", head: true }),
+        adminClient.from("aevtools_announcements").select("id", { count: "exact", head: true }),
         adminClient.from("aevnetwork_news").select("id", { count: "exact", head: true }),
         adminClient.from("aevnetwork_updates").select("id", { count: "exact", head: true }),
         adminClient.from("aevnetwork_blacklist").select("user_id", { count: "exact", head: true }),
