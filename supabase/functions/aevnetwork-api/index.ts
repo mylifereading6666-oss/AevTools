@@ -279,10 +279,11 @@ Deno.serve(async (req: Request) => {
         if(error)return respond(500,{error:"team_message_send_failed"});
         return respond(200,{sent:true});
       }
-      const {data:pref}=await adminClient.from("aevnetwork_team_chat_preferences").select("hidden_before").eq("team_id",teamId).eq("user_id",userId).maybeSingle();
-      let query=adminClient.from("aevnetwork_team_messages").select("id,user_id,body,created_at").eq("team_id",teamId);
-      if(pref?.hidden_before)query=query.gt("created_at",pref.hidden_before);
-      const {data:messages,error}=await query.order("created_at",{ascending:false}).limit(100);
+      // Chat history is retained unless the team itself is permanently deleted.
+      // Hiding a chat only removes the user's membership/list entry; rejoining restores access to history.
+      const {data:messages,error}=await adminClient.from("aevnetwork_team_messages")
+        .select("id,user_id,body,created_at").eq("team_id",teamId)
+        .order("created_at",{ascending:false}).limit(100);
       if(error)return respond(500,{error:"team_chat_load_failed"});
       const ids=[...new Set((messages??[]).map((m:any)=>m.user_id))];
       const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
