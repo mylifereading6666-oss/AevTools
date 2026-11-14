@@ -180,19 +180,22 @@ Deno.serve(async (req: Request) => {
       const {data:team}=await adminClient.from("aevnetwork_teams").select("id,owner_id").eq("id",teamId).maybeSingle();
       if(!team)return respond(404,{error:"team_not_found"});
       if(team.owner_id!==userId)return respond(403,{error:"team_leader_required"});
-      let code="",hash="";
-      for(let i=0;i<5;i++){
-        const n=new Uint32Array(1);crypto.getRandomValues(n);
-        code=String(n[0]%100000000).padStart(8,"0");
-        hash=await hashTeamInvite(code);
-        const {data:collision}=await adminClient.from("aevnetwork_teams").select("id").eq("invite_code_hash",hash).maybeSingle();
-        if(!collision)break;
-        code="";
+      // The UNIQUE constraint on invite_code_hash is the final authority:
+      // even if two leaders generate codes at the same time, duplicate codes
+      // cannot be stored. Retry on unique-violation and return only after save.
+      for(let attempt=0;attempt<20;attempt++){
+        const random=new Uint8Array(4);crypto.getRandomValues(random);
+        const value=new DataView(random.buffer).getUint32(0);
+        const code=String(value%100000000).padStart(8,"0");
+        const hash=await hashTeamInvite(code);
+        const {error}=await adminClient.from("aevnetwork_teams")
+          .update({invite_code_hash:hash,invite_code_updated_at:new Date().toISOString()})
+          .eq("id",teamId);
+        if(!error)return respond(200,{generated:true,code});
+        if(error.code==="23505")continue;
+        return respond(500,{error:"invite_code_save_failed"});
       }
-      if(!code)return respond(500,{error:"invite_code_generation_failed"});
-      const {error}=await adminClient.from("aevnetwork_teams").update({invite_code_hash:hash,invite_code_updated_at:new Date().toISOString()}).eq("id",teamId);
-      if(error)return respond(500,{error:"invite_code_save_failed"});
-      return respond(200,{generated:true,code});
+      return respond(500,{error:"invite_code_generation_failed"});
     }
 
     if (action === "teams_join_code") {
