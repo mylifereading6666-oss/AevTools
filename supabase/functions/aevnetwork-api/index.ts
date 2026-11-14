@@ -74,13 +74,13 @@ Deno.serve(async (req: Request) => {
     if (action === "community_list_posts") {
       const { data: posts, error: postsError } = await adminClient
         .from("aevnetwork_community_posts")
-        .select("id,author_id,title,body,created_at,updated_at")
+        .select("id,author_id,author_name,title,body,image_url,image_path,created_at,updated_at")
         .is("deleted_at", null).order("created_at", { ascending: false }).limit(50);
       if (postsError) return respond(500, { error: "community_posts_load_failed" });
       const postIds = (posts ?? []).map((p: any) => p.id);
       const { data: comments, error: commentsError } = postIds.length
         ? await adminClient.from("aevnetwork_community_comments")
-            .select("id,post_id,author_id,body,created_at")
+            .select("id,post_id,author_id,author_name,body,created_at")
             .in("post_id", postIds).is("deleted_at", null)
             .order("created_at", { ascending: true }).limit(500)
         : { data: [], error: null };
@@ -91,13 +91,13 @@ Deno.serve(async (req: Request) => {
         : { data: [], error: null };
       if (profilesError) return respond(500, { error: "community_profiles_load_failed" });
       const names = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nickname || "ユーザー"]));
-      const commentRows = (comments ?? []).map((c: any) => ({ ...c, author_nickname: names.get(c.author_id) ?? "ユーザー" }));
+      const commentRows = (comments ?? []).map((c: any) => ({ ...c, author_nickname: c.author_name || names.get(c.author_id) || "ユーザー" }));
       const byPost = new Map<string, any[]>();
       for (const c of commentRows) {
         const list = byPost.get(c.post_id) ?? []; list.push(c); byPost.set(c.post_id, list);
       }
       return respond(200, { items: (posts ?? []).map((p: any) => ({
-        ...p, author_nickname: names.get(p.author_id) ?? "ユーザー", comments: byPost.get(p.id) ?? []
+        ...p, author_nickname: p.author_name || names.get(p.author_id) || "ユーザー", comments: byPost.get(p.id) ?? []
       })) });
     }
 
@@ -147,10 +147,10 @@ Deno.serve(async (req: Request) => {
     if (action === "community_create_post") {
       const title = String(body?.title ?? "").trim();
       const content = String(body?.body ?? "").trim();
-      if (!title || title.length > 120 || !content || content.length > 5000)
+      if (!title || title.length > 160 || !content || content.length > 6000)
         return respond(400, { error: "invalid_community_post" });
       const { data, error } = await adminClient.from("aevnetwork_community_posts")
-        .insert({ author_id: userId, title, body: content }).select("id").single();
+        .insert({ author_id: userId, title, body: content, image_url: String(body?.image_url ?? "") || null, image_path: String(body?.image_path ?? "") || null }).select("id").single();
       if (error) return respond(500, { error: "community_post_create_failed" });
       return respond(200, { created: true, id: data.id });
     }
@@ -158,7 +158,7 @@ Deno.serve(async (req: Request) => {
     if (action === "community_create_comment") {
       const postId = String(body?.post_id ?? "");
       const content = String(body?.body ?? "").trim();
-      if (!postId || !content || content.length > 1500) return respond(400, { error: "invalid_community_comment" });
+      if (!postId || !content || content.length > 2000) return respond(400, { error: "invalid_community_comment" });
       const { data: post, error: postError } = await adminClient.from("aevnetwork_community_posts")
         .select("id").eq("id", postId).is("deleted_at", null).maybeSingle();
       if (postError || !post) return respond(404, { error: "community_post_not_found" });
@@ -174,7 +174,7 @@ Deno.serve(async (req: Request) => {
       const id = String(body?.id ?? "");
       if (!id) return respond(400, { error: "invalid_community_target" });
       const { data: target, error: targetError } = await adminClient.from(table)
-        .select("id,author_id").eq("id", id).is("deleted_at", null).maybeSingle();
+        .select("id,author_id,image_path").eq("id", id).is("deleted_at", null).maybeSingle();
       if (targetError || !target) return respond(404, { error: "community_target_not_found" });
       if (target.author_id !== userId && !isAdmin) return respond(403, { error: "owner_or_admin_required" });
       const reason = isAdmin && target.author_id !== userId ? String(body?.reason ?? "管理者によるモデレーション").trim().slice(0,500) : null;
@@ -184,6 +184,7 @@ Deno.serve(async (req: Request) => {
         moderation_reason: reason
       }).eq("id", id);
       if (error) return respond(500, { error: "community_delete_failed" });
+      if (type === "post" && target.image_path) await adminClient.storage.from("aev-board-images").remove([target.image_path]);
       if (isAdmin && target.author_id !== userId) {
         await adminClient.from("aevnetwork_community_moderation_logs").insert({
           target_type: type, target_id: id, action: "remove",
