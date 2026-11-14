@@ -1214,49 +1214,75 @@ $('announcementSave').onclick=async()=>{
 $('announcementCancelEdit').onclick=resetAnnouncementEditor;
 $('announcementsRefresh').onclick=loadAnnouncements;
 if(supabaseClient){
+ supabaseClient.channel('aev-shared-board-tools')
+  .on('postgres_changes',{event:'*',schema:'public',table:'aevnetwork_community_posts'},()=>loadBoard())
+  .on('postgres_changes',{event:'*',schema:'public',table:'aevnetwork_community_comments'},()=>loadBoard())
+  .subscribe();
+}
+if(supabaseClient){
  supabaseClient.channel('aev-shared-announcements-tools')
   .on('postgres_changes',{event:'*',schema:'public',table:'aevtools_announcements'},()=>loadAnnouncements())
   .subscribe();
 }
+async function aevSharedApiCall(action,extra={}){
+ const {data:{session}}=await supabaseClient.auth.getSession();
+ const headers={'Content-Type':'application/json'};
+ if(session?.access_token)headers.Authorization='Bearer '+session.access_token;
+ const response=await fetch('https://vuqbbwdojwmtehgsyfaq.supabase.co/functions/v1/aevnetwork-api',{method:'POST',headers,body:JSON.stringify({action,...extra})});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(data.error||'API通信エラー');
+ return data;
+}
+function aevEscShared(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function loadBoard(){
- const list=$('boardPosts');if(!list||!supabaseClient){if(list)list.textContent='読み込みには接続設定が必要です。';return}
- const session=await aevCommunitySession(),admin=await aevCommunityAdmin();
- const {data:posts,error}=await supabaseClient.from('aevtools_board_posts').select('id,user_id,author_name,title,body,image_url,image_path,created_at').order('created_at',{ascending:false});
- list.innerHTML='';
- if(error){list.textContent='掲示板を取得できません。SupabaseのSQL設定を確認してください。';return}
- if(!posts?.length){list.innerHTML='<div class="empty">まだ投稿はありません。最初の投稿をしてみましょう。</div>';return}
- const ids=posts.map(p=>p.id);const {data:comments,error:commentError}=await supabaseClient.from('aevtools_board_comments').select('id,post_id,user_id,author_name,body,created_at').in('post_id',ids).order('created_at',{ascending:true});
- if(commentError){list.textContent='返信を取得できませんでした：'+commentError.message;return}
- posts.forEach(post=>{
-  const card=document.createElement('article');card.className='panel community-post';
-  const h=document.createElement('h3');h.textContent=post.title;
-  const meta=document.createElement('div');meta.className='community-meta';meta.textContent=(post.author_name||'ユーザー')+' · '+new Date(post.created_at).toLocaleString('ja-JP');
-  const body=document.createElement('p');body.className='community-post-body';body.textContent=post.body;
-  card.append(h,meta,body);
-  if(post.image_url){const img=document.createElement('img');img.className='community-image';img.src=post.image_url;img.alt='投稿画像';img.loading='lazy';card.append(img)}
-  if(session&&(session.user.id===post.user_id||admin)){const actions=document.createElement('div');actions.className='community-actions';const del=document.createElement('button');del.className='btn';del.textContent='投稿を削除';del.onclick=async()=>{if(admin){const reason=prompt('管理者削除の理由を入力してください（1〜1000文字）。');if(reason===null)return;if(!reason.trim()||reason.trim().length>1000){toast('削除理由を1〜1000文字で入力してください。');return}if(!confirm('この投稿を削除しますか？返信もすべて削除され、投稿者にのみ削除通知が届きます。'))return;const {error}=await supabaseClient.rpc('aevtools_admin_delete_board_post',{p_post_id:post.id,p_reason:reason.trim()});if(error){toast('削除できませんでした：'+error.message);return}}else{if(!confirm('自分の投稿を削除しますか？返信もすべて削除されます。'))return;const {error}=await supabaseClient.from('aevtools_board_posts').delete().eq('id',post.id);if(error){toast('削除できませんでした：'+error.message);return}}if(post.image_path)await supabaseClient.storage.from('aev-board-images').remove([post.image_path]);await loadBoard();toast('投稿を削除しました。')};actions.append(del);card.append(actions)}
-  const divider=document.createElement('div');divider.className='sectionhead';divider.innerHTML='<div><h3>返信・会話</h3></div>';card.append(divider);
-  const thread=(comments||[]).filter(c=>c.post_id===post.id);
-  if(!thread.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='返信はまだありません。';card.append(empty)}
-  thread.forEach(c=>{const box=document.createElement('div');box.className='community-comment';const who=document.createElement('strong');who.textContent=(c.author_name||'ユーザー')+' · '+new Date(c.created_at).toLocaleString('ja-JP');const msg=document.createElement('p');msg.textContent=c.body;box.append(who,msg);if(session&&(session.user.id===c.user_id||admin)){const del=document.createElement('button');del.className='btn';del.style.marginTop='8px';del.textContent='返信を削除';del.onclick=async()=>{if(admin){const reason=prompt('管理者削除の理由を入力してください（1〜1000文字）。');if(reason===null)return;if(!reason.trim()||reason.trim().length>1000){toast('削除理由を1〜1000文字で入力してください。');return}if(!confirm('この返信を削除し、返信者に削除通知を送りますか？'))return;const {error}=await supabaseClient.rpc('aevtools_admin_delete_board_reply',{p_reply_id:c.id,p_reason:reason.trim()});if(error){toast('削除できませんでした：'+error.message);return}}else{if(!confirm('自分の返信を削除しますか？'))return;const {error}=await supabaseClient.from('aevtools_board_comments').delete().eq('id',c.id);if(error){toast('削除できませんでした：'+error.message);return}}await loadBoard();toast('返信を削除しました。')};box.append(del)}card.append(box)});
-  const reply=document.createElement('div');reply.className='community-reply';const input=document.createElement('textarea');input.className='field';input.rows=2;input.maxLength=2000;input.placeholder=session?'この投稿に返信する...':'返信するにはログインしてください';input.disabled=!session;const send=document.createElement('button');send.className='btn primary';send.textContent='返信';send.disabled=!session;send.onclick=async()=>{const message=input.value.trim();if(!message)return;send.disabled=true;const {error}=await supabaseClient.from('aevtools_board_comments').insert({post_id:post.id,user_id:session.user.id,body:message});send.disabled=false;if(error){toast('返信できませんでした：'+error.message);return}await loadBoard()};reply.append(input,send);card.append(reply);list.append(card);
- });
+ const list=$('boardPosts');if(!list)return;
+ list.innerHTML='<div class="empty">掲示板を読み込んでいます…</div>';
+ try{
+  const session=await aevCommunitySession(),admin=await aevCommunityAdmin();
+  const result=await aevSharedApiCall('community_list_posts'),posts=result.items||[];
+  if(!posts.length){list.innerHTML='<div class="empty">まだ投稿はありません。</div>';return}
+  list.innerHTML=posts.map(post=>{
+   const image=aevSafeExternalUrl(post.image_url);
+   const comments=post.comments||[];
+   return '<article class="panel community-post"><h3>'+aevEscShared(post.title)+'</h3><div class="community-meta">'+aevEscShared(post.author_nickname)+' · '+aevEscShared(new Date(post.created_at).toLocaleString('ja-JP'))+'</div><p class="community-post-body">'+aevEscShared(post.body)+'</p>'+(image?'<img class="community-image" src="'+aevEscShared(image)+'" alt="投稿画像" loading="lazy">':'')+'<div class="community-actions">'+(session&&(post.author_id===session.user.id||admin)?'<button class="btn" data-shared-post-delete="'+aevEscShared(post.id)+'">投稿を削除</button>':'')+(session&&post.author_id!==session.user.id?'<button class="btn" data-shared-post-report="'+aevEscShared(post.id)+'">報告</button>':'')+'</div><div class="sectionhead"><div><h3>返信・会話 ('+comments.length+')</h3></div></div>'+(comments.map(comment=>'<div class="community-comment"><strong>'+aevEscShared(comment.author_nickname)+' · '+aevEscShared(new Date(comment.created_at).toLocaleString('ja-JP'))+'</strong><p>'+aevEscShared(comment.body)+'</p><div class="community-actions">'+(session&&(comment.author_id===session.user.id||admin)?'<button class="btn" data-shared-comment-delete="'+aevEscShared(comment.id)+'">返信を削除</button>':'')+(session&&comment.author_id!==session.user.id?'<button class="btn" data-shared-comment-report="'+aevEscShared(comment.id)+'">報告</button>':'')+'</div></div>').join('')||'<p class="muted">返信はまだありません。</p>')+'<div class="community-reply"><textarea class="field" rows="2" maxlength="2000" data-shared-reply="'+aevEscShared(post.id)+'" placeholder="'+(session?'この投稿に返信する…':'返信にはログインが必要です')+'" '+(session?'':'disabled')+'></textarea><button class="btn primary" data-shared-reply-send="'+aevEscShared(post.id)+'" '+(session?'':'disabled')+'>返信</button></div></article>';
+  }).join('');
+  list.querySelectorAll('[data-shared-post-delete]').forEach(button=>button.addEventListener('click',async()=>{
+   const post=posts.find(x=>x.id===button.dataset.sharedPostDelete);let reason='';
+   if(admin&&post?.author_id!==session?.user?.id){reason=prompt('管理者削除の理由を入力してください（3文字以上）');if(reason===null)return;if(reason.trim().length<3){toast('削除理由を3文字以上入力してください。');return}}
+   if(!confirm('この投稿を削除しますか？'))return;
+   try{await aevSharedApiCall('community_delete_post',{id:button.dataset.sharedPostDelete,reason});await loadBoard();toast('投稿を削除しました。')}catch(e){toast('削除できませんでした：'+e.message)}
+  }));
+  list.querySelectorAll('[data-shared-comment-delete]').forEach(button=>button.addEventListener('click',async()=>{
+   const comment=posts.flatMap(x=>x.comments||[]).find(x=>x.id===button.dataset.sharedCommentDelete);let reason='';
+   if(admin&&comment?.author_id!==session?.user?.id){reason=prompt('管理者削除の理由を入力してください（3文字以上）');if(reason===null)return;if(reason.trim().length<3){toast('削除理由を3文字以上入力してください。');return}}
+   if(!confirm('この返信を削除しますか？'))return;
+   try{await aevSharedApiCall('community_delete_comment',{id:button.dataset.sharedCommentDelete,reason});await loadBoard();toast('返信を削除しました。')}catch(e){toast('削除できませんでした：'+e.message)}
+  }));
+  list.querySelectorAll('[data-shared-reply-send]').forEach(button=>button.addEventListener('click',async()=>{
+   const input=list.querySelector('[data-shared-reply="'+button.dataset.sharedReplySend+'"]'),body=input?.value.trim();if(!body)return;
+   button.disabled=true;try{await aevSharedApiCall('community_create_comment',{post_id:button.dataset.sharedReplySend,body});await loadBoard();}catch(e){toast('返信できませんでした：'+e.message);button.disabled=false;}
+  }));
+  list.querySelectorAll('[data-shared-post-report],[data-shared-comment-report]').forEach(button=>button.addEventListener('click',async()=>{
+   const isPost=button.hasAttribute('data-shared-post-report'),targetId=button.dataset.sharedPostReport||button.dataset.sharedCommentReport,reason=prompt('報告理由を入力してください（5〜500文字）');if(reason===null)return;
+   try{await aevSharedApiCall('community_report',{target_type:isPost?'post':'comment',target_id:targetId,reason});toast('報告を送信しました。')}catch(e){toast('報告できませんでした：'+e.message)}
+  }));
+ }catch(e){list.innerHTML='<div class="empty">掲示板を読み込めませんでした：'+aevEscShared(e.message)+'</div>';}
 }
 $('boardSubmit').onclick=async()=>{
- const status=$('boardStatus'),session=await aevCommunitySession();if(!session){status.textContent='投稿するにはメールアドレスでログインしてください。';return}
- const title=$('boardTitle').value.trim(),body=$('boardBody').value.trim(),file=$('boardImage').files?.[0];if(!title||!body){status.textContent='タイトルと説明を入力してください。';return}
+ const status=$('boardStatus'),session=await aevCommunitySession();if(!session){status.textContent='投稿するにはログインしてください。';return}
+ const title=$('boardTitle').value.trim(),body=$('boardBody').value.trim(),file=$('boardImage').files?.[0];
+ if(!title||!body){status.textContent='タイトルと説明を入力してください。';return}
  if(title.length>160||body.length>6000){status.textContent='文字数の上限を超えています。';return}
  if(file&&(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)||file.size>5*1024*1024)){status.textContent='画像はJPEG・PNG・WebP・GIF、5MB以内にしてください。';return}
  const button=$('boardSubmit');button.disabled=true;let imageUrl=null,imagePath=null;
  try{
-  if(file){const ext=({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.type];imagePath=session.user.id+'/'+(crypto.randomUUID?crypto.randomUUID():uid())+'.'+ext;const {error:uploadError}=await supabaseClient.storage.from('aev-board-images').upload(imagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;imageUrl=supabaseClient.storage.from('aev-board-images').getPublicUrl(imagePath).data.publicUrl}
-  const {error}=await supabaseClient.from('aevtools_board_posts').insert({user_id:session.user.id,title,body,image_url:imageUrl,image_path:imagePath});if(error)throw error;
+  if(file){const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.type];imagePath=session.user.id+'/'+(crypto.randomUUID?crypto.randomUUID():uid())+'.'+ext;const {error:uploadError}=await supabaseClient.storage.from('aev-board-images').upload(imagePath,file,{contentType:file.type,upsert:false});if(uploadError)throw uploadError;imageUrl=supabaseClient.storage.from('aev-board-images').getPublicUrl(imagePath).data.publicUrl}
+  await aevSharedApiCall('community_create_post',{title,body,image_url:imageUrl,image_path:imagePath});
   $('boardTitle').value='';$('boardBody').value='';$('boardImage').value='';status.textContent='投稿しました。';await loadBoard();
- }catch(e){status.textContent='投稿できませんでした：'+(e.message||'設定を確認してください。')}
+ }catch(e){if(imagePath)await supabaseClient.storage.from('aev-board-images').remove([imagePath]);status.textContent='投稿できませんでした：'+(e.message||'設定を確認してください。')}
  finally{button.disabled=false}
 };
 $('boardRefresh').onclick=loadBoard;
-
 async function refreshBoardDeletionNoticeBadge(){
  const badge=$('boardDeletionNoticeBadge');if(!badge)return;
  if(!supabaseClient){badge.hidden=true;return}
