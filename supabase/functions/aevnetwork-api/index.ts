@@ -597,6 +597,87 @@ Deno.serve(async (req: Request) => {
       return respond(200, { resolved: true, removed: remove });
     }
 
+    if (action === "friends_overview") {
+      const [friendRows,received,sent]=await Promise.all([
+        adminClient.from("aevnetwork_friendships").select("id,user_low,user_high,created_at").or(`user_low.eq.${userId},user_high.eq.${userId}`).order("created_at",{ascending:false}),
+        adminClient.from("aevnetwork_friend_requests").select("id,sender_id,recipient_id,created_at").eq("recipient_id",userId).eq("status","pending").order("created_at",{ascending:false}),
+        adminClient.from("aevnetwork_friend_requests").select("id,sender_id,recipient_id,created_at").eq("sender_id",userId).eq("status","pending").order("created_at",{ascending:false})
+      ]);
+      if(friendRows.error||received.error||sent.error)return respond(500,{error:"friends_load_failed"});
+      const friendIds=(friendRows.data??[]).map((x:any)=>x.user_low===userId?x.user_high:x.user_low);
+      const requestIds=[...(received.data??[]).map((x:any)=>x.sender_id),...(sent.data??[]).map((x:any)=>x.recipient_id)];
+      const ids=[...new Set([...friendIds,...requestIds])];
+      const {data:profiles,error}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname,profile_data").in("user_id",ids):{data:[],error:null};
+      if(error)return respond(500,{error:"friends_profiles_load_failed"});
+      const map=new Map((profiles??[]).map((p:any)=>[p.user_id,p]));
+      const safe=(id:string)=>{const p:any=map.get(id)||{};return {user_id:id,nickname:p.nickname||"ユーザー",profile:p.profile_data||{}};};
+      return respond(200,{friends:friendIds.map((id:string)=>safe(id)),received:(received.data??[]).map((x:any)=>({...x,user:safe(x.sender_id)})),sent:(sent.data??[]).map((x:any)=>({...x,user:safe(x.recipient_id)}))});
+    }
+
+    if (action === "friends_search") {
+      const q=String(body?.query??"").trim().slice(0,40);
+      if(q.length<2)return respond(200,{items:[]});
+      const {data,error}=await adminClient.from("aevtools_profiles").select("user_id,nickname,profile_data").ilike("nickname",`%${q}%`).neq("user_id",userId).order("nickname",{ascending:true}).limit(30);
+      if(error)return respond(500,{error:"friends_search_failed"});
+      const [friendRows,requestRows]=await Promise.all([
+        adminClient.from("aevnetwork_friendships").select("user_low,user_high").or(`user_low.eq.${userId},user_high.eq.${userId}`),
+        adminClient.from("aevnetwork_friend_requests").select("sender_id,recipient_id").eq("status","pending").or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      ]);
+      if(friendRows.error||requestRows.error)return respond(500,{error:"friends_search_status_failed"});
+      const friendSet=new Set((friendRows.data??[]).map((x:any)=>x.user_low===userId?x.user_high:x.user_low));
+      const pendingMap=new Map<string,string>();
+      for(const x of requestRows.data??[]){const other=x.sender_id===userId?x.recipient_id:x.sender_id;pendingMap.set(other,x.sender_id===userId?"sent":"received");}
+      return respond(200,{items:(data??[]).map((p:any)=>({user_id:p.user_id,nickname:p.nickname||"ユーザー",profile:p.profile_data||{},relationship:friendSet.has(p.user_id)?"friend":pendingMap.get(p.user_id)||"none"}))});
+    }
+
+    if (action === "profile_public_get") {
+      const targetId=String(body?.user_id??"");
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId))return respond(400,{error:"invalid_profile_id"});
+      const {data,error}=await adminClient.from("aevtools_profiles").select("user_id,nickname,profile_data,updated_at").eq("user_id",targetId).maybeSingle();
+      if(error)return respond(500,{error:"public_profile_load_failed"});
+      if(!data)return respond(404,{error:"profile_not_found"});
+      return respond(200,{profile:{user_id:data.user_id,nickname:data.nickname||"ユーザー",profile:data.profile_data||{},updated_at:data.updated_at||null}});
+    }
+
+    if (action === "friends_request_send") {
+      const targetId=String(body?.user_id??"");
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId)||targetId===userId)return respond(400,{error:"invalid_friend_target"});
+      const [{data:target},{data:friend}]=await Promise.all([
+        adminClient.from("aevtools_profiles").select("user_id").eq("user_id",targetId).maybeSingle(),
+        adminClient.from("aevnetwork_friendships").select("id").or(`and(user_low.eq.${userId},user_high.eq.${targetId}),and(user_low.eq.${targetId},user_high.eq.${userId})`).maybeSingle()
+      ]);
+      if(!target)return respond(404,{error:"friend_user_not_found"});
+      if(friend)return respond(409,{error:"already_friends"});
+      const {data:reverse}=await adminClient.from("aevnetwork_friend_requests").select("id").eq("sender_id",targetId).eq("recipient_id",userId).eq("status","pending").maybeSingle();
+      if(reverse)return respond(409,{error:"friend_request_received"});
+      const {error}=await adminClient.from("aevnetwork_friend_requests").insert({sender_id:userId,recipient_id:targetId,status:"pending"});
+      if(error)return respond(error.code==="23505"?409:500,{error:error.code==="23505"?"friend_request_exists":"friend_request_send_failed"});
+      return respond(200,{sent:true});
+    }
+
+    if (action === "friends_request_respond") {
+      const requestId=String(body?.request_id??""),decision=String(body?.decision??"");
+      if(!requestId||!["accepted","rejected"].includes(decision))return respond(400,{error:"invalid_friend_response"});
+      const {data:request,error}=await adminClient.from("aevnetwork_friend_requests").update({status:decision,responded_at:new Date().toISOString()}).eq("id",requestId).eq("recipient_id",userId).eq("status","pending").select("id,sender_id,recipient_id").maybeSingle();
+      if(error)return respond(500,{error:"friend_request_update_failed"});
+      if(!request)return respond(404,{error:"friend_request_not_found"});
+      if(decision==="accepted"){
+        const [low,high]=[request.sender_id,request.recipient_id].sort();
+        const {error:friendError}=await adminClient.from("aevnetwork_friendships").upsert({user_low:low,user_high:high},{onConflict:"user_low,user_high",ignoreDuplicates:true});
+        if(friendError)return respond(500,{error:"friend_accept_failed"});
+      }
+      return respond(200,{responded:decision});
+    }
+
+    if (action === "friends_remove") {
+      const targetId=String(body?.user_id??"");
+      if(!targetId||targetId===userId)return respond(400,{error:"invalid_friend_target"});
+      const [low,high]=[userId,targetId].sort();
+      const {error}=await adminClient.from("aevnetwork_friendships").delete().eq("user_low",low).eq("user_high",high);
+      if(error)return respond(500,{error:"friend_remove_failed"});
+      return respond(200,{removed:true});
+    }
+
     if (action === "profile_get") {
       const { data, error } = await userClient.rpc("aevtools_get_my_profile");
       if (error) return respond(500, { error: "profile_load_failed" });
