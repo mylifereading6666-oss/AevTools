@@ -353,16 +353,44 @@ async function aevActivateAccount(session){
    const {data:row,error}=await supabaseClient.from('aevtools_user_data').select('data,updated_at').eq('user_id',userId).maybeSingle();
    if(error)throw error;
    if(aevCloudInitUser!==userId)return true;
-   let changed=previousId!==userId,needsCloudRepair=false;
-   if(row&&row.data&&row.data.storage){
+   let restoreSnapshot=null;
+   try{
+    const backup=await aevSharedApiCall('user_data_snapshot_get',{app_key:'aevtools'});
+    if(backup.snapshot&&typeof backup.snapshot==='object'&&!Array.isArray(backup.snapshot))restoreSnapshot=backup.snapshot;
+   }catch(backupError){console.warn('AevTools maintenance snapshot could not be loaded:',backupError);}
+   const snapshotStorage=restoreSnapshot?.storage&&typeof restoreSnapshot.storage==='object'?restoreSnapshot.storage:{};
+   const currentStorage=row?.data?.storage&&typeof row.data.storage==='object'?row.data.storage:{};
+   const cloudStorage={...snapshotStorage,...currentStorage};
+   const mergeJsonList=(...values)=>{
+    const items=values.flatMap(v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}});
+    const byId=new Map();
+    for(const item of items)if(item&&item.id){const id=String(item.id),prior=byId.get(id);if(!prior||Number(item.updated||0)>=Number(prior.updated||0))byId.set(id,item);}
+    return JSON.stringify([...byId.values()]);
+   };
+   if(snapshotStorage.aev_memos||currentStorage.aev_memos)cloudStorage.aev_memos=mergeJsonList(snapshotStorage.aev_memos,currentStorage.aev_memos);
+   if(snapshotStorage.aev_secret_achievements||currentStorage.aev_secret_achievements)cloudStorage.aev_secret_achievements=mergeJsonList(snapshotStorage.aev_secret_achievements,currentStorage.aev_secret_achievements);
+   for(const key of ['aev_secret_clues','aev_secret_unlocks']){
+    if(snapshotStorage[key]||currentStorage[key]){
+     const parse=v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}};
+     cloudStorage[key]=JSON.stringify([...new Set([...parse(snapshotStorage[key]),...parse(currentStorage[key])])]);
+    }
+   }
+   if(snapshotStorage.aev_memo_tombstones||currentStorage.aev_memo_tombstones){
+    const parse=v=>{try{const x=JSON.parse(v||'{}');return x&&typeof x==='object'&&!Array.isArray(x)?x:{}}catch{return {}}};
+    const tombstones={...parse(snapshotStorage.aev_memo_tombstones)};
+    for(const [id,stamp] of Object.entries(parse(currentStorage.aev_memo_tombstones)))tombstones[id]=Math.max(Number(tombstones[id]||0),Number(stamp||0));
+    cloudStorage.aev_memo_tombstones=JSON.stringify(tombstones);
+   }
+   let changed=previousId!==userId,needsCloudRepair=!!restoreSnapshot;
+   if(Object.keys(cloudStorage).length){
     for(const key of aevAccountStorageKeys){
-     const value=row.data.storage[key],target='aev_account_'+userId+'_'+key,localValue=localStorage.getItem(target);
+     const value=cloudStorage[key],target='aev_account_'+userId+'_'+key,localValue=localStorage.getItem(target);
      if(key==='aev_memo_tombstones')continue;
      if(key==='aev_memos'){
       const parseArray=v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}};
       const localMemos=parseArray(localValue),cloudMemos=parseArray(value);
       const tombstoneKey='aev_account_'+userId+'_aev_memo_tombstones';
-      const cloudTombstones=row.data.storage.aev_memo_tombstones;
+      const cloudTombstones=cloudStorage.aev_memo_tombstones;
       let tombstones={};
       try{tombstones={...JSON.parse(localStorage.getItem(tombstoneKey)||'{}'),...JSON.parse(cloudTombstones||'{}')}}catch{}
       const merged=new Map();
@@ -408,6 +436,10 @@ async function aevActivateAccount(session){
    if(needsCloudRepair){
     const repaired=await aevSaveAccountCloud(userId);
     if(!repaired)throw new Error('アカウントデータの不足分をクラウドへ保存できませんでした');
+    if(restoreSnapshot){
+     try{await aevSharedApiCall('user_data_snapshot_ack',{app_key:'aevtools'});}
+     catch(ackError){console.warn('AevTools maintenance snapshot acknowledgement failed; backup retained:',ackError);}
+    }
    }
    if(changed){location.reload();return true}
    return false;
