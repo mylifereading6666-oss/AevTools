@@ -248,22 +248,15 @@ html:has(body.maintenance-lock),body.maintenance-lock{overflow:hidden!important;
 <div id="signupForm"><h3>新規アカウント登録</h3><label for="signupEmail">メールアドレス</label><input class="field" id="signupEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="signupPassword">パスワード（8文字以上）</label><input class="field" id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="パスワード"><button class="btn primary" id="signupSubmit">確認メールを送信して登録</button></div>
 <div id="loginForm" hidden><h3>ログイン</h3><p class="muted">ログイン状態はこの端末のブラウザーに保存され、次回アクセス時も維持されます。共有端末では使用後にログアウトしてください。</p><label for="loginEmail">メールアドレス</label><input class="field" id="loginEmail" type="email" autocomplete="email" placeholder="name@example.com"><label for="loginPassword">パスワード</label><input class="field" id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード"><div class="row"><button class="btn primary" id="loginSubmit">ログイン</button><button class="btn" id="resetPassword">パスワードを再設定</button></div></div>
 <button class="btn" id="logoutButton" hidden>ログアウト</button><p id="accountMessage" class="muted" aria-live="polite"></p></div></div>
-<div class="panel" id="profilePanel" hidden style="margin-top:16px"><h3>🏷️ ニックネーム設定</h3><p class="muted">他のユーザーにも表示される名前です。1〜20文字で設定できます。</p><div id="profileRoleLabel" class="muted"></div><label for="profileNickname">ニックネーム</label><input class="field" id="profileNickname" maxlength="20" placeholder="表示したい名前"><button class="btn primary" id="saveProfileNickname">プロフィールを保存</button><p id="profileNicknameStatus" class="muted" aria-live="polite"></p><hr style="border-color:var(--line);margin:18px 0"><h3>🎨 プロフィールカスタマイズ</h3><p class="muted">ニックネーム以外の設定は編集ボタンから開けます。</p><button class="btn" id="editSharedProfile" type="button" aria-expanded="false">プロフィール設定を編集</button><div id="sharedProfileEditor" hidden><label for="sharedBio">自己紹介</label><textarea class="field" id="sharedBio" maxlength="240" rows="3" placeholder="自分らしい紹介文"></textarea><label for="sharedGame">好きなゲーム</label><input class="field" id="sharedGame" maxlength="60" placeholder="例：Fortnite"><label for="sharedPlayStyle">プレイスタイル</label><input class="field" id="sharedPlayStyle" maxlength="60" placeholder="例：競技・建築・カジュアル"><label for="sharedAvatar">アイコン画像URL（HTTPS）</label><input class="field" id="sharedAvatar" type="url" placeholder="https://..."><label for="sharedBanner">バナー画像URL（HTTPS）</label><input class="field" id="sharedBanner" type="url" placeholder="https://..."><div class="row"><div style="flex:1"><label for="sharedAccent">アクセントカラー</label><input class="field" id="sharedAccent" type="color" value="#8b7cff"></div><div style="flex:1"><label for="sharedNameColor">ネームカラー</label><input class="field" id="sharedNameColor" type="color" value="#ffffff"></div></div><label for="sharedTheme">テーマ</label><select class="field" id="sharedTheme"><option value="midnight">ミッドナイト</option><option value="neon">ネオン</option><option value="aurora">オーロラ</option></select><label for="sharedNameEffect">ネームエフェクト</label><select class="field" id="sharedNameEffect"><option value="none">なし</option><option value="glow">ネオン発光</option><option value="gradient">グラデーション</option><option value="glitch">グリッチ</option></select><label for="sharedFont">フォント</label><select class="field" id="sharedFont"><option value="default">標準</option><option value="serif">セリフ</option><option value="mono">モノスペース</option></select><p class="muted">プロフィールはAevNetworkと共有されます。ネーム変更は14日ごとです。</p><button class="btn primary" id="saveSharedProfileSettings" type="button">プロフィール設定を保存</button></div><div class="panel" id="toolsTestHelperClaimPanel" hidden style="margin-top:16px"><h3>🧪 テスト補助ユーザー登録</h3><p class="muted">管理者から受け取った専用コードを入力してください。最初に登録した1アカウントだけが対象になります。登録後は変更・解除できません。</p><label for="toolsTestHelperClaimInput">専用コード（16文字）</label><input class="field" id="toolsTestHelperClaimInput" maxlength="16" autocomplete="off" placeholder="16桁の英数字"><button class="btn primary" id="toolsTestHelperClaimButton" type="button">コードを登録</button><p id="toolsTestHelperClaimStatus" class="muted" aria-live="polite"></p></div></div><div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
+<div class="panel" id="profilePanel" hidden style="margin-top:16px"><h3>🏷️ ニックネーム設定</h3><p class="muted">他のユーザーにも表示される名前です。1〜20文字で設定できます。</p><div id="profileRoleLabel" class="muted"></div><label for="profileNickname">ニックネーム</label><input class="field" id="profileNickname" maxlength="20" placeholder="表示したい名前"><button class="btn primary" id="saveProfileNickname">プロフィールを保存</button><p id="profileNicknameStatus" class="muted" aria-live="polite"></p><hr style="border-color:var(--line);margin:18px 0"><h3>🎨 プロフィールカスタマイズ</h3><p class="muted">ニックネーム以外の設定は編集ボタンから開けます。</p><button class="btn" id="editSharedProfile" type="button" aria-expanded="false">プロフィール設定を編集</button><div id="sharedProfileEditor" hidden><label for="sharedBio">自己紹介</label><textarea class="field" id="sharedBio" maxlength="240" rows="3" placeholder="自分らしい紹介文"></textarea><label for="sharedGame">好きなゲーム</label><input class="field" id="sharedGame" maxlength="60" placeholder="例：Fortnite"><label for="sharedPlayStyle">プレイスタイル</label><input class="field" id="sharedPlayStyle" maxlength="60" placeholder="例：競技・建築・カジュアル"><label for="sharedAvatar">アイコン画像URL（HTTPS）</label><input class="field" id="sharedAvatar" type="url" placeholder="https://..."><label for="sharedBanner">バナー画像URL（HTTPS）</label><input class="field" id="sharedBanner" type="url" placeholder="https://..."><div class="row"><div style="flex:1"><label for="sharedAccent">アクセントカラー</label><input class="field" id="sharedAccent" type="color" value="#8b7cff"></div><div style="flex:1"><label for="sharedNameColor">ネームカラー</label><input class="field" id="sharedNameColor" type="color" value="#ffffff"></div></div><label for="sharedTheme">テーマ</label><select class="field" id="sharedTheme"><option value="midnight">ミッドナイト</option><option value="neon">ネオン</option><option value="aurora">オーロラ</option></select><label for="sharedNameEffect">ネームエフェクト</label><select class="field" id="sharedNameEffect"><option value="none">なし</option><option value="glow">ネオン発光</option><option value="gradient">グラデーション</option><option value="glitch">グリッチ</option></select><label for="sharedFont">フォント</label><select class="field" id="sharedFont"><option value="default">標準</option><option value="serif">セリフ</option><option value="mono">モノスペース</option></select><p class="muted">プロフィールはAevNetworkと共有されます。ネーム変更は14日ごとです。</p><button class="btn primary" id="saveSharedProfileSettings" type="button">プロフィール設定を保存</button></div><div></div><div class="panel" id="adminToolsPanel" hidden style="margin-top:16px"><h3>🛠 開発者ダッシュボード</h3><p class="muted">管理者専用の診断・サポート管理機能です。ログには個人情報や認証情報を含めない設計です。</p>
 <div class="panel" id="toolsMaintenanceControl" style="margin:12px 0">
 <h4>🛠 一時メンテナンスモード</h4>
 <p class="muted">有効にすると一般ユーザーは両方のウェブの機能を一時利用できなくなります。唯一の管理者はテストのため全機能を利用できます。AevNetwork側の設定と同期します。</p>
 <p id="toolsMaintenanceStatus" class="muted">状態を確認しています…</p>
 <button class="btn" id="toolsToggleMaintenance" type="button">状態を読み込み中…</button>
 </div>
-<div class="panel" id="toolsTestHelperPanel" style="margin:12px 0">
-<h4>🧪 テスト補助ユーザー登録コード</h4>
-<p class="muted">管理者が一度だけ専用コードを発行できます。最初に登録した一般ユーザー1人だけが永久に対象になります。</p>
-<p id="toolsTestHelperStatus" class="muted">登録状態を確認しています…</p>
-<button class="btn primary" id="toolsGenerateTestHelperCode" type="button">専用コードを発行する</button>
-<div id="toolsTestHelperCodeResult" hidden><label for="toolsTestHelperCodeValue">発行コード（この画面を閉じる前に共有してください）</label><input class="field" id="toolsTestHelperCodeValue" readonly><button class="btn" id="toolsCopyTestHelperCode" type="button">コードをコピー</button></div>
-</div>
 <div class="row"><button class="btn primary" id="runDiagnostics">ブラウザー診断を実行</button><button class="btn" id="downloadDebugReport">診断レポートを保存</button><button class="btn" id="refreshAdminTickets">サポート一覧を更新</button></div>
-<div id="diagnosticResults" class="panel" style="margin-top:12px">診断はまだ実行されていません。</div><h3>サポートリクエスト管理</h3><button class="btn" data-page="admin-cancelled">キャンセル済みリクエスト専用ページを開く</button><div id="adminSupportList" class="muted">一覧を読み込んでください。</div><p class="muted">診断はこのブラウザー内の情報のみを確認します。サーバーのログや他ユーザーの端末情報は取得しません。</p></div><div class="panel" id="adminClaimPanel" style="margin-top:16px"><h3>🔐 開発者・管理者モード</h3><p class="muted">管理者登録は永久に1アカウントのみです。ログアウトしても管理者枠は解除されません。</p><div id="adminClaimStatus" class="muted">管理者状態を確認しています…</div><div id="adminClaimForm" hidden><label for="adminClaimCode">管理者登録コード（8文字）</label><input class="field" id="adminClaimCode" maxlength="8" autocomplete="off" placeholder="8文字の大文字コード"><button class="btn primary" id="adminClaimSubmit">このアカウントを管理者に登録</button></div><p id="adminClaimMessage" class="muted" aria-live="polite"></p></div>
+<div id="diagnosticResults" class="panel" style="margin-top:12px">診断はまだ実行されていません。</div><h3>サポートリクエスト管理</h3><button class="btn" data-page="admin-cancelled">キャンセル済みリクエスト専用ページを開く</button><div id="adminSupportList" class="muted">一覧を読み込んでください。</div><p class="muted">診断はこのブラウザー内の情報のみを確認します。サーバーのログや他ユーザーの端末情報は取得しません。</p></div><div class="panel" id="adminClaimPanel" style="margin-top:16px"><h3>🔐 開発者・管理者モード</h3><p class="muted">管理者登録は永久に1アカウントのみです。ログアウトしても管理者枠は解除されません。</p><div id="adminClaimStatus" class="muted">管理者状態を確認しています…</div><p id="adminClaimMessage" class="muted" aria-live="polite"></p></div>
 <div class="panel" id="supabaseConfigPanel" style="display:none"><h3>🔌 認証サービス接続</h3><p class="muted">SupabaseのProject URLとPublishable keyをここに設定すると、登録・ログイン機能を接続できます。入力した値はこのブラウザに保存されます。Publishable key（公開用キー）のみ使用してください。Secret key / service_role keyは絶対に入力しないでください。</p><label for="supabaseProjectUrl">Project URL</label><input class="field" id="supabaseProjectUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="url"><label for="supabasePublishableKey">Publishable key（公開用）</label><input class="field" id="supabasePublishableKey" type="password" autocomplete="off" placeholder="sb_publishable_..."><div class="row"><button class="btn primary" id="saveSupabaseConfig">接続設定を保存して再接続</button><button class="btn" id="clearSupabaseConfig">設定を削除</button></div><p id="supabaseConfigMessage" class="muted" aria-live="polite"></p></div><div class="panel" style="margin-top:14px"><h3>アカウントについて</h3><p>メールアドレス登録とログインは認証サービスを利用します。認証設定が完了すると利用できます。現在のタスク・メモ等のローカル保存データを自動的にクラウドへ同期する機能は、別途データ同期の実装が必要です。</p></div></section>
 
 <section class="page" id="page-support"><div class="sectionhead"><div><h2>✉ サポート・不具合報告</h2><p>困ったことや不具合を送信し、開発者と返信・会話できます。</p></div></div>
@@ -1381,26 +1374,6 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   if(!active){el?.remove();return;}
   if(!el){el=document.createElement('div');el.id='toolsMaintenanceOverlay';el.className='service-maintenance-overlay';el.innerHTML='<div class="service-maintenance-card"><div style="font-size:2rem">🛠️</div><h2>ただいまメンテナンス中です</h2><p>AevTools・AevNetworkの機能を一時停止しています。作業完了までしばらくお待ちください。</p><p class="muted">管理者・テスト補助者はテストのため通常どおり利用できます。</p><a class="btn primary" href="#" data-page="account" style="display:inline-block;margin-top:12px;text-decoration:none">ログイン・アカウント</a></div>';el.querySelector('[data-page="account"]')?.addEventListener('click',e=>{e.preventDefault();showPage('account');gate();});document.body.append(el);}
  }
- async function updateTestHelperClaim(){
-  const panel=$('toolsTestHelperClaimPanel'),input=$('toolsTestHelperClaimInput'),button=$('toolsTestHelperClaimButton'),status=$('toolsTestHelperClaimStatus');
-  if(!panel||!status)return;
-  if(!supabaseClient){panel.hidden=true;return;}
-  try{
-   const r=await aevSharedApiCall('service_get_status');
-   if(r.is_admin){panel.hidden=true;return;}
-   panel.hidden=false;
-   if(r.is_test_helper){status.textContent='このアカウントはテスト補助ユーザーとして登録済みです。';input.disabled=true;button.disabled=true;}
-   else if(r.test_helper_assigned){status.textContent='テスト補助ユーザーはすでに登録済みです。';input.disabled=true;button.disabled=true;}
-   else{status.textContent='管理者から受け取ったコードを入力できます。';}
-  }catch(e){panel.hidden=true;}
- }
- $('toolsTestHelperClaimButton')?.addEventListener('click',async()=>{
-  const input=$('toolsTestHelperClaimInput'),button=$('toolsTestHelperClaimButton'),status=$('toolsTestHelperClaimStatus'),code=input?.value.trim().toUpperCase();
-  if(!code){status.textContent='コードを入力してください。';return;}
-  button.disabled=true;
-  try{await aevSharedApiCall('test_helper_claim_code',{code});status.textContent='登録しました。このアカウントが唯一のテスト補助ユーザーです。';input.disabled=true;}
-  catch(e){status.textContent=e.message==='test_helper_code_invalid_or_used'?'コードが間違っているか、すでに使用されています。':e.message;button.disabled=false;}
- });
  async function updateMaintenance(){
   if(!window.supabase||!window.supabase.createClient)return;
   const c=(typeof supabaseClient!=='undefined'&&supabaseClient)?supabaseClient:window.supabase.createClient('https://vuqbbwdojwmtehgsyfaq.supabase.co','sb_publishable_BnrPnMn5fCDrXuloVe7XYw_W5R7JH4E',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -1413,34 +1386,12 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
    if(st)st.textContent=maintenance?'現在：メンテナンスモード ON（一般ユーザーは利用停止）':'現在：通常稼働中';
    if(btn){btn.textContent=maintenance?'メンテナンスモードを解除':'メンテナンスモードを有効化';btn.disabled=!isAdmin;}
    gate();
-   if(isAdmin)await loadToolsTestHelper();else await updateTestHelperClaim();
   }catch(e){
    gate();
    const st=$('toolsMaintenanceStatus');
    if(st)st.textContent='状態を取得できません：'+(e?.message||'通信エラー');
-   const helperStatus=$('toolsTestHelperStatus');
-   if(helperStatus)helperStatus.textContent='テスト補助ユーザー情報を読み込めません。ページを再読み込みしてください。';
   }
  }
- async function loadToolsTestHelper(){
-  const status=$('toolsTestHelperStatus'),button=$('toolsGenerateTestHelperCode'),result=$('toolsTestHelperCodeResult');
-  if(!status||!button||!isAdmin)return;
-  try{
-   const r=await aevSharedApiCall('admin_test_helper_get');
-   if(r.assigned){status.textContent='テスト補助ユーザー登録済みです。変更・解除はできません。';button.disabled=true;if(result)result.hidden=true;}
-   else if(r.code_ready){status.textContent='コードは発行済みです。再発行できません。登録を待っています。';button.disabled=true;}
-   else{status.textContent='未発行です。コードは一度だけ発行できます。';button.disabled=false;}
-  }catch(e){status.textContent='状態を取得できません：'+e.message;button.disabled=true;}
- }
- $('toolsGenerateTestHelperCode')?.addEventListener('click',async()=>{
-  const button=$('toolsGenerateTestHelperCode'),status=$('toolsTestHelperStatus'),result=$('toolsTestHelperCodeResult');
-  if(!confirm('テスト補助ユーザー登録コードを一度だけ発行します。発行後の再発行はできません。続行しますか？'))return;
-  button.disabled=true;
-  try{const r=await aevSharedApiCall('admin_test_helper_generate_code');$('toolsTestHelperCodeValue').value=r.code;result.hidden=false;status.textContent='コードを発行しました。対象者に安全な方法で共有してください。';}
-  catch(e){status.textContent='発行できませんでした：'+e.message;button.disabled=false;}
- });
- $('toolsCopyTestHelperCode')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('toolsTestHelperCodeValue').value);$('toolsTestHelperStatus').textContent='コードをコピーしました。';}catch(e){$('toolsTestHelperStatus').textContent='コピーできません。コードを長押ししてコピーしてください。'}});
-
  $('toolsToggleMaintenance')?.addEventListener('click',async()=>{
   if(!isAdmin)return;const btn=$('toolsToggleMaintenance');btn.disabled=true;
   try{await aevSharedApiCall('service_set_maintenance',{enabled:!maintenance});await updateMaintenance();}
