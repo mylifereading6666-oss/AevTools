@@ -71,6 +71,26 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === "community_my_deletion_notices") {
+      const { data, error } = await adminClient.from("aevnetwork_community_deletion_notices")
+        .select("id,item_type,item_title,item_content,reason,created_at,read_at")
+        .eq("user_id", userId).order("created_at", { ascending: false }).limit(100);
+      if (error) return respond(500, { error: "deletion_notices_load_failed" });
+      return respond(200, { items: data ?? [] });
+    }
+
+    if (action === "community_read_deletion_notice") {
+      const noticeId = String(body?.notice_id ?? "");
+      if (!noticeId) return respond(400, { error: "invalid_notice_id" });
+      const { data, error } = await adminClient.from("aevnetwork_community_deletion_notices")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", noticeId).eq("user_id", userId)
+        .select("id").maybeSingle();
+      if (error) return respond(500, { error: "deletion_notice_update_failed" });
+      if (!data) return respond(404, { error: "deletion_notice_not_found" });
+      return respond(200, { read: true });
+    }
+
     if (action === "community_list_posts") {
       const { data: posts, error: postsError } = await adminClient
         .from("aevnetwork_community_posts")
@@ -405,7 +425,7 @@ Deno.serve(async (req: Request) => {
       }
       if (kind === "announcements" || kind === "news") {
         const link = String(item.link_url ?? "").trim();
-        if (link && !/^https:\/\//i.test(link)) return respond(400, { error: "invalid_link" });
+        if (link && !/^https?:\/\//i.test(link)) return respond(400, { error: "invalid_link" });
         record.link_url = link || null;
       }
       const id = String(item.id ?? "");
