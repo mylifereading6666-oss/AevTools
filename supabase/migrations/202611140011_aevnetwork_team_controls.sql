@@ -32,10 +32,13 @@ declare approved_count integer;
 begin
   if new.status='approved' then
     perform 1 from public.aevnetwork_teams where id=new.team_id for update;
-    select count(*) into approved_count
-      from public.aevnetwork_team_members m
-      where m.team_id=new.team_id and m.status='approved'
-        and (tg_op='INSERT' or m.id<>new.id);
+    if tg_op='INSERT' then
+      select count(*) into approved_count from public.aevnetwork_team_members m
+        where m.team_id=new.team_id and m.status='approved';
+    else
+      select count(*) into approved_count from public.aevnetwork_team_members m
+        where m.team_id=new.team_id and m.status='approved' and m.id<>new.id;
+    end if;
     if approved_count >= 4 then raise exception 'team_full'; end if;
   end if;
   return new;
