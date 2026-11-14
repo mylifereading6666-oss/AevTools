@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "supabase/functions/aevnetwork-api/**"
+      - "supabase/functions/fortnite-feed-sync/**"
       - ".github/workflows/deploy-aevnetwork-api.yml"
   workflow_dispatch:
 
@@ -38,4 +39,6 @@ jobs:
           test -n "$SUPABASE_PROJECT_ID" || { echo "Missing SUPABASE_PROJECT_ID secret"; exit 1; }
 
       - name: Deploy Edge Function
-        run: supabase functions deploy aevnetwork-api --project-ref "$SUPABASE_PROJECT_ID" --yes
+        run: |
+          supabase functions deploy aevnetwork-api --project-ref "$SUPABASE_PROJECT_ID" --yes
+          supabase functions deploy fortnite-feed-sync --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt --yes
