@@ -1400,13 +1400,13 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   const status=$('toolsTestHelperStatus'),select=$('toolsTestHelperUser'),button=$('toolsAssignTestHelper');
   if(!status||!select||!button||!isAdmin)return;
   try{
-   const [assigned,users]=await Promise.all([aevSharedApiCall('admin_test_helper_get'),aevSharedApiCall('admin_list_users',{page:1})]);
+   const [assigned,users,currentSession]=await Promise.all([aevSharedApiCall('admin_test_helper_get'),aevSharedApiCall('admin_list_users',{page:1}),supabaseClient.auth.getSession()]);
    if(assigned.assigned&&assigned.user){
     status.textContent='永久割り当て済み：'+(assigned.user.email||assigned.user.id)+'（変更・解除不可）';
     select.disabled=true;button.disabled=true;return;
    }
    const list=users.users||[];
-   select.innerHTML='<option value="">ユーザーを選択</option>'+list.filter(u=>u.id!==a.data?.session?.user?.id).map(u=>'<option value="'+aevEscShared(u.id)+'">'+aevEscShared(u.email||u.id)+'</option>').join('');
+   select.innerHTML='<option value="">ユーザーを選択</option>'+list.filter(u=>u.id!==currentSession.data?.session?.user?.id).map(u=>'<option value="'+aevEscShared(u.id)+'">'+aevEscShared(u.email||u.id)+'</option>').join('');
    status.textContent='未割り当てです。登録ユーザーを1人だけ選択できます。';
   }catch(e){status.textContent='状態を取得できません：'+e.message;select.disabled=true;button.disabled=true;}
  }
