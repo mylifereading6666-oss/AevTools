@@ -1393,6 +1393,7 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   finally{btn.disabled=false;}
  });
  document.addEventListener('click',e=>{if(e.target.closest('[data-page],#headerLogin,#headerSignup,#headerAccount'))setTimeout(gate,0);});
+ if(typeof supabaseClient!=='undefined'&&supabaseClient?.auth)supabaseClient.auth.onAuthStateChange(()=>setTimeout(updateMaintenance,0));
  updateMaintenance();setInterval(()=>{if(!document.hidden)updateMaintenance();},15000);
 })();
 </script>
