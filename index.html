@@ -255,6 +255,14 @@ table{max-width:100%;display:block;overflow-x:auto}
 <p id="toolsMaintenanceStatus" class="muted">状態を確認しています…</p>
 <button class="btn" id="toolsToggleMaintenance" type="button">状態を読み込み中…</button>
 </div>
+<div class="panel" id="toolsTestHelperPanel" style="margin:12px 0">
+<h4>🧪 テスト補助ユーザーの永久割り当て</h4>
+<p class="muted">管理者以外の登録ユーザーを1人だけ指定できます。割り当て後は変更・解除できません。テスト補助ユーザーはメンテナンス中も一般機能を利用できますが、管理者機能は使えません。</p>
+<p id="toolsTestHelperStatus" class="muted">割り当て状態を確認しています…</p>
+<label for="toolsTestHelperUser">テスト補助ユーザー</label>
+<select class="field" id="toolsTestHelperUser"><option value="">ユーザー一覧を読み込み中…</option></select>
+<button class="btn primary" id="toolsAssignTestHelper" type="button">このユーザーを永久に割り当てる</button>
+</div>
 <div class="row"><button class="btn primary" id="runDiagnostics">ブラウザー診断を実行</button><button class="btn" id="downloadDebugReport">診断レポートを保存</button><button class="btn" id="refreshAdminTickets">サポート一覧を更新</button></div>
 <div id="diagnosticResults" class="panel" style="margin-top:12px">診断はまだ実行されていません。</div><h3>サポートリクエスト管理</h3><button class="btn" data-page="admin-cancelled">キャンセル済みリクエスト専用ページを開く</button><div id="adminSupportList" class="muted">一覧を読み込んでください。</div><p class="muted">診断はこのブラウザー内の情報のみを確認します。サーバーのログや他ユーザーの端末情報は取得しません。</p></div><div class="panel" id="adminClaimPanel" style="margin-top:16px"><h3>🔐 開発者・管理者モード</h3><p class="muted">管理者登録は永久に1アカウントのみです。ログアウトしても管理者枠は解除されません。</p><div id="adminClaimStatus" class="muted">管理者状態を確認しています…</div><div id="adminClaimForm" hidden><label for="adminClaimCode">管理者登録コード（8文字）</label><input class="field" id="adminClaimCode" maxlength="8" autocomplete="off" placeholder="8文字の大文字コード"><button class="btn primary" id="adminClaimSubmit">このアカウントを管理者に登録</button></div><p id="adminClaimMessage" class="muted" aria-live="polite"></p></div>
 <div class="panel" id="supabaseConfigPanel" style="display:none"><h3>🔌 認証サービス接続</h3><p class="muted">SupabaseのProject URLとPublishable keyをここに設定すると、登録・ログイン機能を接続できます。入力した値はこのブラウザに保存されます。Publishable key（公開用キー）のみ使用してください。Secret key / service_role keyは絶対に入力しないでください。</p><label for="supabaseProjectUrl">Project URL</label><input class="field" id="supabaseProjectUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="url"><label for="supabasePublishableKey">Publishable key（公開用）</label><input class="field" id="supabasePublishableKey" type="password" autocomplete="off" placeholder="sb_publishable_..."><div class="row"><button class="btn primary" id="saveSupabaseConfig">接続設定を保存して再接続</button><button class="btn" id="clearSupabaseConfig">設定を削除</button></div><p id="supabaseConfigMessage" class="muted" aria-live="polite"></p></div><div class="panel" style="margin-top:14px"><h3>アカウントについて</h3><p>メールアドレス登録とログインは認証サービスを利用します。認証設定が完了すると利用できます。現在のタスク・メモ等のローカル保存データを自動的にクラウドへ同期する機能は、別途データ同期の実装が必要です。</p></div></section>
@@ -1366,10 +1374,10 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   if(!t)return;$('announcementTitle').value=t[0];$('announcementBody').value=t[1];$('announcementAdminStatus').textContent='下書きを入力しました。日付・時刻・内容を確認して編集してください。';
  }
  document.querySelectorAll('[data-tools-template]').forEach(b=>b.addEventListener('click',()=>fillToolsTemplate(b.dataset.toolsTemplate)));
- let maintenance=false,isAdmin=false;
+ let maintenance=false,isAdmin=false,isTestHelper=false;
  function gate(){
   let el=$('toolsMaintenanceOverlay');
-  const active=maintenance&&!isAdmin&&document.querySelector('.page.active')?.id!=='page-account';
+  const active=maintenance&&!isAdmin&&!isTestHelper&&document.querySelector('.page.active')?.id!=='page-account';
   if(!active){el?.remove();return;}
   if(!el){el=document.createElement('div');el.id='toolsMaintenanceOverlay';el.className='service-maintenance-overlay';el.innerHTML='<div class="service-maintenance-card"><div style="font-size:2rem">🛠️</div><h2>ただいまメンテナンス中です</h2><p>AevTools・AevNetworkの機能を一時停止しています。作業完了までしばらくお待ちください。</p><p class="muted">管理者はテストのため通常どおり利用できます。</p></div>';document.body.append(el);}
  }
@@ -1377,15 +1385,40 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
   if(!window.supabase||!window.supabase.createClient)return;
   const c=(typeof supabaseClient!=='undefined'&&supabaseClient)?supabaseClient:window.supabase.createClient('https://vuqbbwdojwmtehgsyfaq.supabase.co','sb_publishable_BnrPnMn5fCDrXuloVe7XYw_W5R7JH4E',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   try{
-   const [m,a]=await Promise.all([c.rpc('aevtools_get_service_maintenance'),c.auth.getSession()]);
-   maintenance=!m.error&&m.data===true;
+   const [m,a]=await Promise.all([aevSharedApiCall('service_get_status'),c.auth.getSession()]);
+   maintenance=m.maintenance_enabled===true;
+   isTestHelper=m.is_test_helper===true;
    if(a.data?.session){const r=await c.rpc('aevtools_is_admin');isAdmin=!r.error&&r.data===true;}else isAdmin=false;
    const st=$('toolsMaintenanceStatus'),btn=$('toolsToggleMaintenance');
    if(st)st.textContent=maintenance?'現在：メンテナンスモード ON（一般ユーザーは利用停止）':'現在：通常稼働中';
    if(btn){btn.textContent=maintenance?'メンテナンスモードを解除':'メンテナンスモードを有効化';btn.disabled=!isAdmin;}
    gate();
+   if(isAdmin)await loadToolsTestHelper();
   }catch(e){gate();}
  }
+ async function loadToolsTestHelper(){
+  const status=$('toolsTestHelperStatus'),select=$('toolsTestHelperUser'),button=$('toolsAssignTestHelper');
+  if(!status||!select||!button||!isAdmin)return;
+  try{
+   const [assigned,users]=await Promise.all([aevSharedApiCall('admin_test_helper_get'),aevSharedApiCall('admin_list_users',{page:1})]);
+   if(assigned.assigned&&assigned.user){
+    status.textContent='永久割り当て済み：'+(assigned.user.email||assigned.user.id)+'（変更・解除不可）';
+    select.disabled=true;button.disabled=true;return;
+   }
+   const list=users.users||[];
+   select.innerHTML='<option value="">ユーザーを選択</option>'+list.filter(u=>u.id!==a.data?.session?.user?.id).map(u=>'<option value="'+aevEscShared(u.id)+'">'+aevEscShared(u.email||u.id)+'</option>').join('');
+   status.textContent='未割り当てです。登録ユーザーを1人だけ選択できます。';
+  }catch(e){status.textContent='状態を取得できません：'+e.message;select.disabled=true;button.disabled=true;}
+ }
+ $('toolsAssignTestHelper')?.addEventListener('click',async()=>{
+  const select=$('toolsTestHelperUser'),status=$('toolsTestHelperStatus'),button=$('toolsAssignTestHelper'),id=select?.value;
+  if(!id){status.textContent='ユーザーを選択してください。';return;}
+  const label=select.selectedOptions?.[0]?.textContent||id;
+  if(!confirm('「'+label+'」を永久にテスト補助ユーザーとして割り当てます。後から変更・解除できません。よろしいですか？'))return;
+  button.disabled=true;
+  try{const r=await aevSharedApiCall('admin_test_helper_assign',{user_id:id});status.textContent='永久割り当て完了：'+(r.user?.email||id)+'。変更・解除はできません。';select.disabled=true;}
+  catch(e){status.textContent=e.message==='test_helper_already_assigned'?'すでに別のユーザーが割り当てられています。':'割り当てできませんでした：'+e.message;button.disabled=false;}
+ });
  $('toolsToggleMaintenance')?.addEventListener('click',async()=>{
   if(!isAdmin)return;const btn=$('toolsToggleMaintenance');btn.disabled=true;
   try{const {error}=await window.__aevMaintenanceClient.rpc('aevtools_set_service_maintenance',{p_enabled:!maintenance});if(error)throw error;await updateMaintenance();}
