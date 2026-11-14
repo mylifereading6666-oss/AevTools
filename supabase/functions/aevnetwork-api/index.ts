@@ -688,9 +688,7 @@ Deno.serve(async (req: Request) => {
         const query=String(body?.query??"").trim();
         if(query.length<2||query.length>80)return respond(400,{error:"invalid_user_search"});
         const {data,error}=await adminClient.from("aevtools_profiles")
-          .select("user_id,nickname").ilike("nickname","%"+query.replace(/[%_\\]/g,"\\    if (action === "teams_admin_list" || action === "teams_admin_mediation_list" || action === "teams_admin_mediation_approve" || action === "teams_admin_chat_list") {
-      if(!isAdmin)return respond(403,{error:"admin_required"});
-      if(action==="teams_admin_list"){")+"%")
+          .select("user_id,nickname").ilike("nickname","%"+query+"%")
           .order("nickname",{ascending:true}).limit(20);
         if(error)return respond(500,{error:"admin_user_search_failed"});
         return respond(200,{items:data??[]});
