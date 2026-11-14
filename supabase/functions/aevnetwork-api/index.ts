@@ -42,7 +42,30 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await adminClient.from("aevtools_service_control")
         .select("maintenance_enabled,updated_at").eq("singleton", true).maybeSingle();
       if (error) return respond(500, { error: "service_status_load_failed" });
-      return respond(200, { maintenance_enabled: data?.maintenance_enabled === true, updated_at: data?.updated_at ?? null });
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      let userId = "";
+      let isAdmin = false;
+      if (token) {
+        const { data: auth } = await authClient.auth.getUser(token);
+        if (auth.user) {
+          userId = auth.user.id;
+          const client = createClient(supabaseUrl, anonKey, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+            auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+          });
+          const { data: flag } = await client.rpc("aevtools_is_admin");
+          isAdmin = flag === true;
+        }
+      }
+      const { data: helper } = await adminClient.from("aevtools_test_helper_assignment")
+        .select("user_id").eq("singleton", true).maybeSingle();
+      return respond(200, {
+        maintenance_enabled: data?.maintenance_enabled === true,
+        updated_at: data?.updated_at ?? null,
+        is_test_helper: !!userId && helper?.user_id === userId && !isAdmin,
+        test_helper_assigned: !!helper?.user_id,
+      });
     }
 
 
@@ -151,6 +174,11 @@ Deno.serve(async (req: Request) => {
             });
             const { data: publicAdminFlag } = await publicClient.rpc("aevtools_is_admin");
             publicAdmin = publicAdminFlag === true;
+            if (!publicAdmin) {
+              const { data: helper } = await adminClient.from("aevtools_test_helper_assignment")
+                .select("user_id").eq("singleton", true).maybeSingle();
+              publicAdmin = helper?.user_id === publicAuth.user.id;
+            }
           }
         }
         if (!publicAdmin) return respond(503, { error: "service_maintenance", message: "現在メンテナンス中です。" });
@@ -184,6 +212,10 @@ Deno.serve(async (req: Request) => {
     });
     const { data: adminFlag, error: adminFlagError } = await userClient.rpc("aevtools_is_admin");
     const isAdmin = !adminFlagError && adminFlag === true;
+    const { data: assignedTestHelper, error: testHelperLookupError } = await adminClient
+      .from("aevtools_test_helper_assignment").select("user_id").eq("singleton", true).maybeSingle();
+    if (testHelperLookupError) return respond(500, { error: "test_helper_lookup_failed" });
+    const isTestHelper = !isAdmin && assignedTestHelper?.user_id === userId;
     if (isAdmin) {
       const { error: registryError } = await adminClient.from("aevnetwork_team_admin_registry")
         .upsert({ singleton: true, user_id: userId }, { onConflict: "singleton" });
@@ -192,7 +224,29 @@ Deno.serve(async (req: Request) => {
 
     if (action === "is_admin") {
       if (adminFlagError) return respond(500, { error: "admin_check_failed" });
-      return respond(200, { is_admin: isAdmin });
+      return respond(200, { is_admin: isAdmin, is_test_helper: isTestHelper });
+    }
+
+    if (action === "admin_test_helper_get") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const helper = assignedTestHelper?.user_id ? await adminClient.auth.admin.getUserById(assignedTestHelper.user_id) : null;
+      return respond(200, { assigned: !!assignedTestHelper?.user_id, user: helper?.data?.user ? {
+        id: helper.data.user.id, email: helper.data.user.email ?? ""
+      } : null });
+    }
+
+    if (action === "admin_test_helper_assign") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      if (assignedTestHelper?.user_id) return respond(409, { error: "test_helper_already_assigned" });
+      const targetId = String(body?.user_id ?? "").trim();
+      if (!targetId || targetId === userId) return respond(400, { error: "invalid_test_helper_user" });
+      const target = await adminClient.auth.admin.getUserById(targetId);
+      if (target.error || !target.data.user) return respond(404, { error: "test_helper_user_not_found" });
+      const { error } = await adminClient.from("aevtools_test_helper_assignment").insert({
+        singleton: true, user_id: targetId, assigned_by: userId
+      });
+      if (error) return respond(409, { error: "test_helper_assignment_failed" });
+      return respond(200, { assigned: true, user: { id: targetId, email: target.data.user.email ?? "" } });
     }
 
     if (action === "service_set_maintenance") {
@@ -208,7 +262,7 @@ Deno.serve(async (req: Request) => {
     const { data: serviceControl, error: serviceControlError } = await adminClient.from("aevtools_service_control")
       .select("maintenance_enabled").eq("singleton", true).maybeSingle();
     if (serviceControlError) return respond(500, { error: "service_status_load_failed" });
-    if (serviceControl?.maintenance_enabled === true && !isAdmin) {
+    if (serviceControl?.maintenance_enabled === true && !isAdmin && !isTestHelper) {
       return respond(503, { error: "service_maintenance", message: "現在メンテナンス中です。" });
     }
 
