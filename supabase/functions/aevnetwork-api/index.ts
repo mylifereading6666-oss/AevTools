@@ -71,6 +71,36 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === "community_list_posts") {
+      const { data: posts, error: postsError } = await adminClient
+        .from("aevnetwork_community_posts")
+        .select("id,author_id,title,body,created_at,updated_at")
+        .is("deleted_at", null).order("created_at", { ascending: false }).limit(50);
+      if (postsError) return respond(500, { error: "community_posts_load_failed" });
+      const postIds = (posts ?? []).map((p: any) => p.id);
+      const { data: comments, error: commentsError } = postIds.length
+        ? await adminClient.from("aevnetwork_community_comments")
+            .select("id,post_id,author_id,body,created_at")
+            .in("post_id", postIds).is("deleted_at", null)
+            .order("created_at", { ascending: true }).limit(500)
+        : { data: [], error: null };
+      if (commentsError) return respond(500, { error: "community_comments_load_failed" });
+      const ids = [...new Set([...(posts ?? []).map((p: any) => p.author_id), ...(comments ?? []).map((c: any) => c.author_id)])];
+      const { data: profiles, error: profilesError } = ids.length
+        ? await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id", ids)
+        : { data: [], error: null };
+      if (profilesError) return respond(500, { error: "community_profiles_load_failed" });
+      const names = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nickname || "ユーザー"]));
+      const commentRows = (comments ?? []).map((c: any) => ({ ...c, author_nickname: names.get(c.author_id) ?? "ユーザー" }));
+      const byPost = new Map<string, any[]>();
+      for (const c of commentRows) {
+        const list = byPost.get(c.post_id) ?? []; list.push(c); byPost.set(c.post_id, list);
+      }
+      return respond(200, { items: (posts ?? []).map((p: any) => ({
+        ...p, author_nickname: names.get(p.author_id) ?? "ユーザー", comments: byPost.get(p.id) ?? []
+      })) });
+    }
+
     if (action === "public_list_content") {
       const kind = String(body?.kind ?? "");
       const publicTables: Record<string, string> = {
@@ -113,6 +143,121 @@ Deno.serve(async (req: Request) => {
       .from("aevnetwork_blacklist").select("reason").eq("user_id", userId).maybeSingle();
     if (blockedError) return respond(500, { error: "blacklist_check_failed" });
     if (blockedRow && !isAdmin) return respond(403, { error: "aevnetwork_restricted", reason: blockedRow.reason });
+
+    if (action === "community_create_post") {
+      const title = String(body?.title ?? "").trim();
+      const content = String(body?.body ?? "").trim();
+      if (!title || title.length > 120 || !content || content.length > 5000)
+        return respond(400, { error: "invalid_community_post" });
+      const { data, error } = await adminClient.from("aevnetwork_community_posts")
+        .insert({ author_id: userId, title, body: content }).select("id").single();
+      if (error) return respond(500, { error: "community_post_create_failed" });
+      return respond(200, { created: true, id: data.id });
+    }
+
+    if (action === "community_create_comment") {
+      const postId = String(body?.post_id ?? "");
+      const content = String(body?.body ?? "").trim();
+      if (!postId || !content || content.length > 1500) return respond(400, { error: "invalid_community_comment" });
+      const { data: post, error: postError } = await adminClient.from("aevnetwork_community_posts")
+        .select("id").eq("id", postId).is("deleted_at", null).maybeSingle();
+      if (postError || !post) return respond(404, { error: "community_post_not_found" });
+      const { error } = await adminClient.from("aevnetwork_community_comments")
+        .insert({ post_id: postId, author_id: userId, body: content });
+      if (error) return respond(500, { error: "community_comment_create_failed" });
+      return respond(200, { created: true });
+    }
+
+    if (action === "community_delete_post" || action === "community_delete_comment") {
+      const type = action === "community_delete_post" ? "post" : "comment";
+      const table = type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
+      const id = String(body?.id ?? "");
+      if (!id) return respond(400, { error: "invalid_community_target" });
+      const { data: target, error: targetError } = await adminClient.from(table)
+        .select("id,author_id").eq("id", id).is("deleted_at", null).maybeSingle();
+      if (targetError || !target) return respond(404, { error: "community_target_not_found" });
+      if (target.author_id !== userId && !isAdmin) return respond(403, { error: "owner_or_admin_required" });
+      const reason = isAdmin && target.author_id !== userId ? String(body?.reason ?? "管理者によるモデレーション").trim().slice(0,500) : null;
+      const { error } = await adminClient.from(table).update({
+        deleted_at: new Date().toISOString(),
+        moderated_by: isAdmin && target.author_id !== userId ? userId : null,
+        moderation_reason: reason
+      }).eq("id", id);
+      if (error) return respond(500, { error: "community_delete_failed" });
+      if (isAdmin && target.author_id !== userId) {
+        await adminClient.from("aevnetwork_community_moderation_logs").insert({
+          target_type: type, target_id: id, action: "remove",
+          reason: reason ?? "管理者によるモデレーション", admin_id: userId
+        });
+      }
+      return respond(200, { deleted: true });
+    }
+
+    if (action === "community_report") {
+      const type = String(body?.target_type ?? "");
+      const targetId = String(body?.target_id ?? "");
+      const reason = String(body?.reason ?? "").trim();
+      if (!["post","comment"].includes(type) || !targetId || reason.length < 5 || reason.length > 500)
+        return respond(400, { error: "invalid_community_report" });
+      const table = type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
+      const { data: target, error: targetError } = await adminClient.from(table)
+        .select("id").eq("id", targetId).is("deleted_at", null).maybeSingle();
+      if (targetError || !target) return respond(404, { error: "community_target_not_found" });
+      const { error } = await adminClient.from("aevnetwork_community_reports")
+        .insert({ target_type: type, target_id: targetId, reporter_id: userId, reason });
+      if (error) return respond(400, { error: "community_report_duplicate_or_failed" });
+      return respond(200, { reported: true });
+    }
+
+    if (action === "community_admin_list_reports") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const { data, error } = await adminClient.from("aevnetwork_community_reports")
+        .select("id,target_type,target_id,reporter_id,reason,status,created_at")
+        .eq("status","pending").order("created_at",{ascending:false}).limit(100);
+      if (error) return respond(500, { error: "community_reports_load_failed" });
+      const ids = [...new Set((data ?? []).map((r: any) => r.reporter_id))];
+      const { data: profiles, error: profileError } = ids.length
+        ? await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids)
+        : { data: [], error: null };
+      if (profileError) return respond(500, { error: "community_profiles_load_failed" });
+      const names = new Map((profiles ?? []).map((p: any) => [p.user_id,p.nickname || "ユーザー"]));
+      const rows = await Promise.all((data ?? []).map(async (r: any) => {
+        const table = r.target_type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
+        const { data: target } = await adminClient.from(table).select("title,body").eq("id",r.target_id).maybeSingle();
+        return { ...r, reporter_nickname: names.get(r.reporter_id) ?? "ユーザー",
+          target_preview: String(target?.title ?? target?.body ?? "対象コンテンツなし").slice(0,300) };
+      }));
+      return respond(200, { items: rows });
+    }
+
+    if (action === "community_admin_resolve_report") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const reportId = String(body?.report_id ?? "");
+      const remove = body?.remove === true;
+      const reason = String(body?.reason ?? "").trim().slice(0,500);
+      if (!reportId || (remove && reason.length < 3)) return respond(400, { error: "invalid_moderation_request" });
+      const { data: report, error: reportError } = await adminClient.from("aevnetwork_community_reports")
+        .select("id,target_type,target_id,status").eq("id",reportId).eq("status","pending").maybeSingle();
+      if (reportError || !report) return respond(404, { error: "community_report_not_found" });
+      if (remove) {
+        const table = report.target_type === "post" ? "aevnetwork_community_posts" : "aevnetwork_community_comments";
+        const { error } = await adminClient.from(table).update({
+          deleted_at: new Date().toISOString(), moderated_by: userId, moderation_reason: reason
+        }).eq("id",report.target_id).is("deleted_at",null);
+        if (error) return respond(500, { error: "community_moderation_failed" });
+      }
+      const { error: updateError } = await adminClient.from("aevnetwork_community_reports").update({
+        status: "resolved", reviewed_by: userId, reviewed_at: new Date().toISOString()
+      }).eq("id",reportId).eq("status","pending");
+      if (updateError) return respond(500, { error: "community_report_update_failed" });
+      const { error: logError } = await adminClient.from("aevnetwork_community_moderation_logs").insert({
+        target_type: report.target_type, target_id: report.target_id,
+        action: remove ? "remove" : "dismiss_report",
+        reason: reason || "報告を確認し、対応不要と判断", admin_id: userId
+      });
+      if (logError) return respond(500, { error: "community_moderation_log_failed" });
+      return respond(200, { resolved: true, removed: remove });
+    }
 
     if (action === "profile_get") {
       const { data, error } = await userClient.rpc("aevtools_get_my_profile");
