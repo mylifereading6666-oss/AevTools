@@ -38,6 +38,14 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const action = String(body?.action ?? "");
 
+    if (action === "service_get_status") {
+      const { data, error } = await adminClient.from("aevtools_service_control")
+        .select("maintenance_enabled,updated_at").eq("singleton", true).maybeSingle();
+      if (error) return respond(500, { error: "service_status_load_failed" });
+      return respond(200, { maintenance_enabled: data?.maintenance_enabled === true, updated_at: data?.updated_at ?? null });
+    }
+
+
     // Login is proxied through this API so AevNetwork does not need a direct
     // Supabase database client. The returned access token is a normal Supabase
     // Auth session token and must be kept private by the browser.
@@ -127,6 +135,26 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "public_list_content") {
+      const { data: maintenanceRow, error: maintenanceError } = await adminClient.from("aevtools_service_control")
+        .select("maintenance_enabled").eq("singleton", true).maybeSingle();
+      if (maintenanceError) return respond(500, { error: "service_status_load_failed" });
+      if (maintenanceRow?.maintenance_enabled === true) {
+        const publicTokenHeader = req.headers.get("Authorization") ?? "";
+        const publicToken = publicTokenHeader.startsWith("Bearer ") ? publicTokenHeader.slice(7) : "";
+        let publicAdmin = false;
+        if (publicToken) {
+          const { data: publicAuth } = await authClient.auth.getUser(publicToken);
+          if (publicAuth.user) {
+            const publicClient = createClient(supabaseUrl, anonKey, {
+              global: { headers: { Authorization: `Bearer ${publicToken}` } },
+              auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+            });
+            const { data: publicAdminFlag } = await publicClient.rpc("aevtools_is_admin");
+            publicAdmin = publicAdminFlag === true;
+          }
+        }
+        if (!publicAdmin) return respond(503, { error: "service_maintenance", message: "現在メンテナンス中です。" });
+      }
       const kind = String(body?.kind ?? "");
       const publicTables: Record<string, string> = {
         announcements: "aevtools_announcements",
@@ -165,6 +193,23 @@ Deno.serve(async (req: Request) => {
     if (action === "is_admin") {
       if (adminFlagError) return respond(500, { error: "admin_check_failed" });
       return respond(200, { is_admin: isAdmin });
+    }
+
+    if (action === "service_set_maintenance") {
+      if (!isAdmin) return respond(403, { error: "admin_required" });
+      const enabled = body?.enabled === true;
+      const { error } = await adminClient.from("aevtools_service_control").upsert({
+        singleton: true, maintenance_enabled: enabled, updated_at: new Date().toISOString(), updated_by: userId
+      }, { onConflict: "singleton" });
+      if (error) return respond(500, { error: "service_maintenance_update_failed" });
+      return respond(200, { saved: true, maintenance_enabled: enabled });
+    }
+
+    const { data: serviceControl, error: serviceControlError } = await adminClient.from("aevtools_service_control")
+      .select("maintenance_enabled").eq("singleton", true).maybeSingle();
+    if (serviceControlError) return respond(500, { error: "service_status_load_failed" });
+    if (serviceControl?.maintenance_enabled === true && !isAdmin) {
+      return respond(503, { error: "service_maintenance", message: "現在メンテナンス中です。" });
     }
 
     // AevNetwork blacklist is scoped to this service only. It never disables
