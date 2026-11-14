@@ -174,6 +174,27 @@ Deno.serve(async (req: Request) => {
     if (blockedError) return respond(500, { error: "blacklist_check_failed" });
     if (blockedRow && !isAdmin) return respond(403, { error: "aevnetwork_restricted", reason: blockedRow.reason });
 
+    // Resolve public role badges from authoritative server-side records.
+    // A leader badge exists while the user owns at least one active team.
+    async function getBadgeMap(userIds: string[]) {
+      const ids = [...new Set(userIds.filter((x) => typeof x === "string" && x.length > 0))].slice(0, 150);
+      if (!ids.length) return new Map<string, any>();
+      const [admins, blocked, leaders] = await Promise.all([
+        adminClient.from("aevnetwork_team_admin_registry").select("user_id").in("user_id", ids),
+        adminClient.from("aevnetwork_blacklist").select("user_id").in("user_id", ids),
+        adminClient.from("aevnetwork_teams").select("owner_id").in("owner_id", ids)
+      ]);
+      if (admins.error || blocked.error || leaders.error) throw new Error("user_badges_load_failed");
+      const adminSet = new Set((admins.data ?? []).map((x: any) => x.user_id));
+      const blockedSet = new Set((blocked.data ?? []).map((x: any) => x.user_id));
+      const leaderSet = new Set((leaders.data ?? []).map((x: any) => x.owner_id));
+      return new Map(ids.map((id) => [id, {
+        is_admin: adminSet.has(id),
+        is_blacklisted: blockedSet.has(id),
+        is_leader: leaderSet.has(id)
+      }]));
+    }
+
     if (action === "teams_invite_generate") {
       const teamId=String(body?.team_id??"");
       if(!teamId)return respond(400,{error:"invalid_team_id"});
@@ -229,7 +250,8 @@ Deno.serve(async (req: Request) => {
       if(members.error||profiles.error||mine.error)return respond(500,{error:"teams_details_load_failed"});
       const names=new Map((profiles.data??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
       const mineMap=new Map((mine.data??[]).map((m:any)=>[m.team_id,m]));
-      return respond(200,{items:(teams??[]).map((t:any)=>({...t,owner_nickname:names.get(t.owner_id)||"ユーザー",
+      const badges=await getBadgeMap((teams??[]).map((t:any)=>t.owner_id));
+      return respond(200,{items:(teams??[]).map((t:any)=>({...t,owner_nickname:names.get(t.owner_id)||"ユーザー",owner_badges:badges.get(t.owner_id)||{},
         member_count:(members.data??[]).filter((m:any)=>m.team_id===t.id&&m.status==="approved").length,
         my_status:mineMap.get(t.id)?.status||null,my_role:mineMap.get(t.id)?.role||null}))});
     }
@@ -294,10 +316,9 @@ Deno.serve(async (req: Request) => {
       const ids=[...new Set((rows??[]).map((m:any)=>m.user_id))];
       const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
       const names=new Map((profiles??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
-      const {data:adminRows}=ids.length?await adminClient.from("aevnetwork_team_admin_registry").select("user_id").in("user_id",ids):{data:[]};
-      const adminIds=new Set((adminRows??[]).map((x:any)=>x.user_id));
+      const badges=await getBadgeMap(ids);
       const isLeader=team.owner_id===userId;
-      return respond(200,{is_leader:isLeader,is_owner:isLeader,invite_code_updated_at:isLeader?team.invite_code_updated_at:null,items:(rows??[]).filter((m:any)=>isLeader||m.status==="approved").map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",is_admin:adminIds.has(m.user_id)}))});
+      return respond(200,{is_leader:isLeader,is_owner:isLeader,invite_code_updated_at:isLeader?team.invite_code_updated_at:null,items:(rows??[]).filter((m:any)=>isLeader||m.status==="approved").map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",...(badges.get(m.user_id)||{})}))});
     }
 
     if (action === "teams_kick") {
@@ -359,7 +380,8 @@ Deno.serve(async (req: Request) => {
       const ids=[...new Set((messages??[]).map((m:any)=>m.user_id))];
       const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
       const names=new Map((profiles??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
-      return respond(200,{items:(messages??[]).reverse().map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",mine:m.user_id===userId}))});
+      const badges=await getBadgeMap(ids);
+      return respond(200,{items:(messages??[]).reverse().map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー",mine:m.user_id===userId,...(badges.get(m.user_id)||{})}))});
     }
 
     if (action === "teams_leave" || action === "teams_chat_hide") {
@@ -610,7 +632,8 @@ Deno.serve(async (req: Request) => {
       const {data:profiles,error}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname,profile_data").in("user_id",ids):{data:[],error:null};
       if(error)return respond(500,{error:"friends_profiles_load_failed"});
       const map=new Map((profiles??[]).map((p:any)=>[p.user_id,p]));
-      const safe=(id:string)=>{const p:any=map.get(id)||{};return {user_id:id,nickname:p.nickname||"ユーザー",profile:p.profile_data||{}};};
+      const badges=await getBadgeMap(ids);
+      const safe=(id:string)=>{const p:any=map.get(id)||{};return {user_id:id,nickname:p.nickname||"ユーザー",profile:p.profile_data||{},...(badges.get(id)||{})};};
       return respond(200,{friends:friendIds.map((id:string)=>safe(id)),received:(received.data??[]).map((x:any)=>({...x,user:safe(x.sender_id)})),sent:(sent.data??[]).map((x:any)=>({...x,user:safe(x.recipient_id)}))});
     }
 
@@ -627,7 +650,8 @@ Deno.serve(async (req: Request) => {
       const friendSet=new Set((friendRows.data??[]).map((x:any)=>x.user_low===userId?x.user_high:x.user_low));
       const pendingMap=new Map<string,string>();
       for(const x of requestRows.data??[]){const other=x.sender_id===userId?x.recipient_id:x.sender_id;pendingMap.set(other,x.sender_id===userId?"sent":"received");}
-      return respond(200,{items:(data??[]).map((p:any)=>({user_id:p.user_id,nickname:p.nickname||"ユーザー",profile:p.profile_data||{},relationship:friendSet.has(p.user_id)?"friend":pendingMap.get(p.user_id)||"none"}))});
+      const badges=await getBadgeMap((data??[]).map((p:any)=>p.user_id));
+      return respond(200,{items:(data??[]).map((p:any)=>({user_id:p.user_id,nickname:p.nickname||"ユーザー",profile:p.profile_data||{},...(badges.get(p.user_id)||{}),relationship:friendSet.has(p.user_id)?"friend":pendingMap.get(p.user_id)||"none"}))});
     }
 
     if (action === "profile_public_get") {
@@ -636,7 +660,8 @@ Deno.serve(async (req: Request) => {
       const {data,error}=await adminClient.from("aevtools_profiles").select("user_id,nickname,profile_data,updated_at").eq("user_id",targetId).maybeSingle();
       if(error)return respond(500,{error:"public_profile_load_failed"});
       if(!data)return respond(404,{error:"profile_not_found"});
-      return respond(200,{profile:{user_id:data.user_id,nickname:data.nickname||"ユーザー",profile:data.profile_data||{},updated_at:data.updated_at||null}});
+      const badges=await getBadgeMap([data.user_id]);
+      return respond(200,{profile:{user_id:data.user_id,nickname:data.nickname||"ユーザー",profile:data.profile_data||{},...(badges.get(data.user_id)||{}),updated_at:data.updated_at||null}});
     }
 
     if (action === "friends_request_send") {
@@ -681,7 +706,8 @@ Deno.serve(async (req: Request) => {
     if (action === "profile_get") {
       const { data, error } = await userClient.rpc("aevtools_get_my_profile");
       if (error) return respond(500, { error: "profile_load_failed" });
-      return respond(200, { profile: data });
+      const badges=await getBadgeMap([userId]);
+      return respond(200, { profile: {...(data||{}),...(badges.get(userId)||{})} });
     }
 
     if (action === "profile_save") {
