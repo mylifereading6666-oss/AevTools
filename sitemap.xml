@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://mylifereading6666-oss.github.io/AevTools/</loc>
-  </url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/terms.html</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/privacy-policy.html</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/community-guidelines.html</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/disclaimer.html</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/copyright.html</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/operation-policy.html</loc></url>
+  <url><loc>https://mylifereading6666-oss.github.io/AevTools/guide.html</loc></url>
 </urlset>
