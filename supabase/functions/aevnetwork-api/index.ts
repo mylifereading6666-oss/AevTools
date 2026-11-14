@@ -114,6 +114,24 @@ Deno.serve(async (req: Request) => {
     if (blockedError) return respond(500, { error: "blacklist_check_failed" });
     if (blockedRow && !isAdmin) return respond(403, { error: "aevnetwork_restricted", reason: blockedRow.reason });
 
+    if (action === "profile_get") {
+      const { data, error } = await userClient.rpc("aevtools_get_my_profile");
+      if (error) return respond(500, { error: "profile_load_failed" });
+      return respond(200, { profile: data });
+    }
+
+    if (action === "profile_save") {
+      const nickname = String(body?.nickname ?? "").trim();
+      const profile = body?.profile && typeof body.profile === "object" && !Array.isArray(body.profile) ? body.profile : {};
+      if (!nickname || nickname.length > 20) return respond(400, { error: "nickname_length_invalid" });
+      const { data, error } = await userClient.rpc("aevtools_update_my_profile", {
+        p_nickname: nickname,
+        p_profile: profile
+      });
+      if (error) return respond(400, { error: error.message || "profile_save_failed" });
+      return respond(200, { profile: data });
+    }
+
     if (action === "admin_dashboard") {
       if (!isAdmin) return respond(403, { error: "admin_required" });
       let userCount = 0;
