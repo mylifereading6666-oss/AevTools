@@ -1377,6 +1377,7 @@ if(supabaseClient){supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshB
  function gate(){
   let el=$('toolsMaintenanceOverlay');
   const active=maintenance&&!isAdmin&&!isTestHelper&&document.querySelector('.page.active')?.id!=='page-account';
+  document.body.classList.toggle('maintenance-lock',active);
   if(!active){el?.remove();return;}
   if(!el){el=document.createElement('div');el.id='toolsMaintenanceOverlay';el.className='service-maintenance-overlay';el.innerHTML='<div class="service-maintenance-card"><div style="font-size:2rem">🛠️</div><h2>ただいまメンテナンス中です</h2><p>AevTools・AevNetworkの機能を一時停止しています。作業完了までしばらくお待ちください。</p><p class="muted">管理者はテストのため通常どおり利用できます。</p></div>';document.body.append(el);}
  }
