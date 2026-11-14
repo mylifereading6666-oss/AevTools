@@ -323,7 +323,7 @@ Deno.serve(async (req: Request) => {
         return respond(200,{items:teams??[]});
       }
       if(action==="teams_admin_mediation_list"){
-        const {data:rows,error}=await adminClient.from("aevnetwork_team_mediation_requests").select("id,team_id,requester_id,message,status,created_at").eq("status","pending").order("created_at",{ascending:true});
+        const {data:rows,error}=await adminClient.from("aevnetwork_team_mediation_requests").select("id,team_id,requester_id,message,status,created_at").in("status",["pending","approved"]).order("created_at",{ascending:true});
         if(error)return respond(500,{error:"mediation_list_failed"});
         const ids=[...new Set((rows??[]).map((x:any)=>x.requester_id))],teamIds=[...new Set((rows??[]).map((x:any)=>x.team_id))];
         const [profiles,teams]=await Promise.all([
@@ -336,7 +336,7 @@ Deno.serve(async (req: Request) => {
       if(action==="teams_admin_mediation_approve"){
         const requestId=String(body?.request_id??""),decision=String(body?.decision??"approved");
         if(!requestId||!["approved","closed"].includes(decision))return respond(400,{error:"invalid_mediation_decision"});
-        const {data,error}=await adminClient.from("aevnetwork_team_mediation_requests").update({status:decision,updated_at:new Date().toISOString()}).eq("id",requestId).eq("status","pending").select("id").maybeSingle();
+        let update=adminClient.from("aevnetwork_team_mediation_requests").update({status:decision,updated_at:new Date().toISOString()}).eq("id",requestId); update=decision==="approved"?update.eq("status","pending"):update.in("status",["pending","approved"]); const {data,error}=await update.select("id").maybeSingle();
         if(error)return respond(500,{error:"mediation_update_failed"});
         if(!data)return respond(404,{error:"mediation_request_not_found"});
         return respond(200,{updated:true});
