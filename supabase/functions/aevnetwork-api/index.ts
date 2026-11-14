@@ -256,7 +256,7 @@ Deno.serve(async (req: Request) => {
     if (action === "test_helper_claim_code") {
       if (isAdmin) return respond(403, { error: "admin_cannot_be_test_helper" });
       if (isTestHelper) return respond(409, { error: "test_helper_already_claimed" });
-      const code = String(body?.code ?? "").replace(/\\s/g, "").toUpperCase();
+      const code = String(body?.code ?? "").replace(/\s/g, "").toUpperCase();
       if (!/^[A-HJ-NP-Z2-9]{16}$/.test(code)) return respond(400, { error: "invalid_test_helper_code" });
       const codeHash = await hashTeamInvite(code);
       if (!assignedTestHelper || assignedTestHelper.user_id || assignedTestHelper.code_hash !== codeHash) {
