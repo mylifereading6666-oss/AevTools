@@ -10,9 +10,7 @@ as $$
 declare
   v_data jsonb;
 begin
-  if p_user_id is null or not coalesce((
-    select maintenance_enabled from public.aevtools_service_control where singleton = true
-  ), false) then
+  if p_user_id is null then
     return;
   end if;
 
