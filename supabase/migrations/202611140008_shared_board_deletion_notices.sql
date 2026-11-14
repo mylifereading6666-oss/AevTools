@@ -53,5 +53,5 @@ begin
 end;
 $$;
 
-grant execute on function public.aevtools_my_board_deletion_notices() to authenticated;
+revoke all on function public.aevtools_my_board_deletion_notices() from public, anon;\nrevoke all on function public.aevtools_read_board_deletion_notice(uuid) from public, anon;\ngrant execute on function public.aevtools_my_board_deletion_notices() to authenticated;
 grant execute on function public.aevtools_read_board_deletion_notice(uuid) to authenticated;
