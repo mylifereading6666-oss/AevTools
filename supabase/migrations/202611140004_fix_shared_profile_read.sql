@@ -3,7 +3,7 @@
 CREATE OR REPLACE FUNCTION public.aevtools_get_my_profile()
 RETURNS jsonb
 LANGUAGE plpgsql
-STABLE
+VOLATILE
 SECURITY DEFINER
 SET search_path = public
 AS $$
