@@ -350,7 +350,8 @@ Deno.serve(async (req: Request) => {
       const ids=[...new Set((messages??[]).map((m:any)=>m.user_id))];
       const {data:profiles}=ids.length?await adminClient.from("aevtools_profiles").select("user_id,nickname").in("user_id",ids):{data:[]};
       const names=new Map((profiles??[]).map((p:any)=>[p.user_id,p.nickname||"ユーザー"]));
-      return respond(200,{team,items:(messages??[]).reverse().map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー"})),audit_only:true});
+      const {data:mediationGrant}=await adminClient.from("aevnetwork_team_mediation_requests").select("id").eq("team_id",teamId).eq("status","approved").limit(1).maybeSingle();
+      return respond(200,{team,items:(messages??[]).reverse().map((m:any)=>({...m,nickname:names.get(m.user_id)||"ユーザー"})),audit_only:true,mediation_allowed:!!mediationGrant});
     }
 
     if (action === "community_create_post") {
