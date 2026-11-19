@@ -683,7 +683,7 @@ async function refreshSecretDataFromCloud(){
   return true;
  }catch(e){console.warn('Secret data refresh failed:',e);toast('実績データを読み込めませんでした。通信状態を確認してください。');return false}
 }
-function openSecretConsole(){const modal=$('secretModal');modal.classList.add('show');refreshAdminAchievementButton();refreshSecretDataFromCloud();const achievement=aevGetLocal(secretKey);if(!achievement){const now=new Date().toLocaleString('ja-JP');aevSetLocal(secretKey,now);$('achievementDate').textContent=now}else $('achievementDate').textContent=achievement;awardSecret('secret-discoverer','シークレット発見者');if(new Date().getHours()>=0&&new Date().getHours()<5)awardSecret('night-explorer','深夜の探検家');syncSecretMode();updateSecretConsole()}
+async function openSecretConsole(){const modal=$('secretModal');modal.classList.add('show');refreshAdminAchievementButton();await refreshSecretDataFromCloud();const achievement=aevGetLocal(secretKey);if(!achievement){const now=new Date().toLocaleString('ja-JP');aevSetLocal(secretKey,now);$('achievementDate').textContent=now}else $('achievementDate').textContent=achievement;await awardSecret('secret-discoverer','シークレット発見者');if(new Date().getHours()>=0&&new Date().getHours()<5)await awardSecret('night-explorer','深夜の探検家');syncSecretMode();updateSecretConsole()}
 function syncSecretMode(){const active=aevGetLocal('aev0rn_mode')==='1';document.body.classList.toggle('aev0rn-mode',active);$('toggleAev0rn').textContent=active?'Aev0rnモードを無効化':'Aev0rnモードを有効化';$('modeStatus').textContent=active?'現在：有効':'現在：通常モード'}
 // YouTube supporter achievement: only award after YouTube API confirms subscription.
 // 公開サイト用Google OAuth設定。APIキーはGoogle Cloud側でHTTPリファラーとYouTube Data APIに制限してください。
