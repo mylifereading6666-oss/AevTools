@@ -315,7 +315,7 @@ function startAevPresenceHeartbeat(){
 
 let aevActiveUserId=localStorage.getItem('aev_active_account_id')||null;
 let aevCloudReady=false,aevCloudSaveTimer=null,aevCloudInitUser=null,aevCloudInitPromise=null,aevCloudSavePromise=Promise.resolve();
-const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_memo_tombstones','aev_budget','aev_secret_achievement','aev_secret_clues','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings','aev_roulette_congrats_seen'];
+const aevAccountStorageKeys=['aev_tasks','aev_studies','aev_money','aev_memos','aev_memo_tombstones','aev_budget','aev_secret_achievement','aev_secret_unlocks','aev_secret_achievements','aev0rn_mode','aev_focus_settings','aev_roulette_congrats_seen'];
 function aevScopedKey(key){return aevActiveUserId?'aev_account_'+aevActiveUserId+'_'+key:key}
 function aevGetLocal(key){return localStorage.getItem(aevScopedKey(key))}
 function aevSetLocal(key,value){localStorage.setItem(aevScopedKey(key),String(value));aevQueueCloudSave()}
@@ -369,7 +369,7 @@ async function aevActivateAccount(session){
    };
    if(snapshotStorage.aev_memos||currentStorage.aev_memos)cloudStorage.aev_memos=mergeJsonList(snapshotStorage.aev_memos,currentStorage.aev_memos);
    if(snapshotStorage.aev_secret_achievements||currentStorage.aev_secret_achievements)cloudStorage.aev_secret_achievements=mergeJsonList(snapshotStorage.aev_secret_achievements,currentStorage.aev_secret_achievements);
-   for(const key of ['aev_secret_clues','aev_secret_unlocks']){
+   for(const key of ['aev_secret_unlocks']){
     if(snapshotStorage[key]||currentStorage[key]){
      const parse=v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}};
      cloudStorage[key]=JSON.stringify([...new Set([...parse(snapshotStorage[key]),...parse(currentStorage[key])])]);
@@ -405,7 +405,7 @@ async function aevActivateAccount(session){
       if(localValue!==mergedText){localStorage.setItem(target,mergedText);changed=true}
       if(localStorage.getItem(tombstoneKey)!==tombstoneText){localStorage.setItem(tombstoneKey,tombstoneText);changed=true}
       if(value!==mergedText||cloudTombstones!==tombstoneText)needsCloudRepair=true;
-     }else if(['aev_secret_achievements','aev_secret_clues','aev_secret_unlocks'].includes(key)){
+     }else if(['aev_secret_achievements','aev_secret_unlocks'].includes(key)){
       const parseList=v=>{try{const x=JSON.parse(v||'[]');return Array.isArray(x)?x:[]}catch{return []}};
       const cloudList=parseList(value),localList=parseList(localValue);
       let mergedList;
@@ -679,7 +679,7 @@ async function refreshSecretDataFromCloud(){
   if(aevActiveUserId!==userId||!aevCloudReady)return false;
   const cloudStorage=row?.data?.storage||{};
   const parseList=value=>{try{const parsed=typeof value==='string'?JSON.parse(value):value;return Array.isArray(parsed)?parsed:[]}catch{return []}};
-  const keys=[achievementStorageKey,clueStorageKey,unlockedStorageKey];
+  const keys=[achievementStorageKey,unlockedStorageKey];
   for(const key of keys){
    const local=parseList(aevGetLocal(key)),cloud=parseList(cloudStorage[key]);
    let merged;
