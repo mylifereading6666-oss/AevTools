@@ -627,10 +627,10 @@ async function saveSecretList(key,list){
  return true;
 }
 function secretCluesFound(){return readSecretList(clueStorageKey)}
-function secretUnlocks(){return readSecretList(unlockedStorageKey)}
+function secretUnlocks(){const earned=readSecretList(achievementStorageKey),unlocks=[];if(earned.some(x=>x.id==='unlock-glitch'))unlocks.push('AEV-GLITCH');if(earned.some(x=>x.id==='unlock-neon'))unlocks.push('AEV-NEON');return unlocks}
 function hasSecretUnlock(code){return secretUnlocks().includes(code)}
 async function awardSecret(id,title){let list=readSecretList(achievementStorageKey);if(!list.some(x=>x.id===id)){list.push({id,title,date:new Date().toLocaleString('ja-JP')});const saved=await saveSecretList(achievementStorageKey,list);toast(saved?'🏆 実績解除・自動保存完了：'+title:'🏆 実績解除：'+title+'（クラウド保存未完了。再接続後に再保存してください）')}}
-function collectClue(id){const clue=secretClues.find(x=>x.id===id);if(!clue)return;let found=secretCluesFound();if(found.includes(id)){toast('このヒントはすでに発見済みです');return}found.push(id);saveSecretList(clueStorageKey,found);awardSecret('clue-'+id,clue.title);toast(clue.label);if(found.length===3){awardSecret('all-clues','三つのヒントを発見');const unlocks=secretUnlocks();['AEV-GLITCH','AEV-NEON'].forEach(x=>{if(!unlocks.includes(x))unlocks.push(x)});saveSecretList(unlockedStorageKey,unlocks);awardSecret('unlock-glitch','グリッチ解放者');awardSecret('unlock-neon','ネオン解放者');toast('🎉 3つのヒントを発見！隠しテーマを解除しました。')}updateSecretConsole()}
+function collectClue(id){const clue=secretClues.find(x=>x.id===id);if(!clue)return;let found=secretCluesFound();if(found.includes(id)){toast('このヒントはすでに発見済みです');return}found.push(id);saveSecretList(clueStorageKey,found);awardSecret('clue-'+id,clue.title);toast(clue.label);if(found.length===3){awardSecret('all-clues','三つのヒントを発見');toast('🎉 3つのヒントをすべて発見しました！')}updateSecretConsole()}
 async function syncAdminAchievementUnlocks(){
  if(!supabaseClient)return false;
  try{
