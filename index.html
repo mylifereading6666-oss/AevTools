@@ -456,6 +456,16 @@ async function aevActivateAccount(session){
 }
 const $=id=>document.getElementById(id), read=(key,def=[])=>{try{return JSON.parse(aevGetLocal('aev_'+key))??def}catch{return def}}, save=(key,val)=>aevSetLocal('aev_'+key,JSON.stringify(val)), uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window.toastT);window.toastT=setTimeout(()=>$('toast').style.display='none',2300)}
+const homeExplorerPagesKey='aev_home_explorer_pages';
+async function recordHomeExplorerVisit(name){
+ const required=['home','announcements','board'];
+ if(!required.includes(name))return;
+ const visited=readSecretList(homeExplorerPagesKey);
+ if(visited.includes(name))return;
+ visited.push(name);
+ await saveSecretList(homeExplorerPagesKey,visited);
+ if(required.every(page=>visited.includes(page)))await awardSecret('home-explorer','ホームの探検家');
+}
 function showPage(name){
  const target=$('page-'+name);
  if(!target){toast('ページが見つかりません：'+name);return}
@@ -474,6 +484,7 @@ document.querySelectorAll('[data-page]').forEach(el=>{
   if(!$('page-'+name)){e.preventDefault();toast('移動先ページが見つかりません：'+name);return}
   e.preventDefault();
   showPage(name);
+  recordHomeExplorerVisit(name);
  });
 });
 $('hamb').onclick=()=>{const opened=$('sidebar').classList.toggle('open');$('overlay').classList.toggle('show',opened);document.body.classList.toggle('menu-open',opened)};$('overlay').onclick=()=>{$('sidebar').classList.remove('open');$('overlay').classList.remove('show');document.body.classList.remove('menu-open')};
@@ -591,7 +602,7 @@ let secretTapCount=0,secretTapTimer=null;
 const secretKey='aev_secret_achievement', clueStorageKey='aev_secret_clues', unlockedStorageKey='aev_secret_unlocks', achievementStorageKey='aev_secret_achievements';
 const secretLogo=document.querySelector('.brand .logo');
 const secretClues=[
- {id:'home',part:'AEV',label:'ヒント1：ホームに隠された文字「AEV」',title:'ホームの探検家'},
+ {id:'home',part:'AEV',label:'ヒント1：ホームに隠された文字「AEV」',title:'ホームのヒント発見'},
  {id:'about',part:'GLITCH',label:'ヒント2：使い方ページに隠された文字「GLITCH」',title:'情報ページの探検家'},
  {id:'focus',part:'NEON',label:'ヒント3：AevFocusに隠された文字「NEON」',title:'集中ページの探検家'}
 ];
@@ -601,7 +612,7 @@ async function saveSecretList(key,list){
  aevSetLocal(key,value);
  // ログイン・クラウド初期化が完了していない場合は「保存完了」と扱わない。
  if(!aevActiveUserId||!aevCloudReady||!supabaseClient)return false;
- if(!['aev_secret_achievements','aev_secret_clues','aev_secret_unlocks'].includes(key))return false;
+ if(!['aev_secret_achievements','aev_secret_clues','aev_secret_unlocks','aev_home_explorer_pages'].includes(key))return false;
  const userId=aevActiveUserId;
  const saved=await aevFlushAccountCloud(userId);
  if(!saved||aevActiveUserId!==userId||!aevCloudReady)return false;
@@ -627,7 +638,7 @@ async function syncAdminAchievementUnlocks(){
   if(error||data!==true)return false;
   const allAchievements=[
    ['secret-discoverer','シークレット発見者'],
-   ['clue-home','ホームの探検家'],
+   ['clue-home','ホームのヒント発見'],['home-explorer','ホームの探検家'],
    ['clue-about','情報ページの探検家'],
    ['clue-focus','集中ページの探検家'],
    ['all-clues','三つのヒントを発見'],
@@ -650,7 +661,7 @@ function updateSecretConsole(){
  $('toggleGlitch').disabled=!unlocks.includes('AEV-GLITCH');$('toggleGlitch').textContent=unlocks.includes('AEV-GLITCH')?'⚡ グリッチモードを切り替え':'⚡ グリッチモード（未解除）';
  $('toggleNeon').disabled=!unlocks.includes('AEV-NEON');$('toggleNeon').textContent=unlocks.includes('AEV-NEON')?'💠 ネオンモードを切り替え':'💠 ネオンモード（未解除）';
  $('secretThemeStatus').textContent='現在のテーマ：'+(document.body.classList.contains('glitch-mode')?'グリッチ':document.body.classList.contains('neon-mode')?'ネオン':document.body.classList.contains('aev0rn-mode')?'Aev0rn':'通常');
- const list=$('achievementList');list.innerHTML='';const achievements=[['secret-discoverer','シークレット発見者'],['clue-home','ホームの探検家'],['clue-about','情報ページの探検家'],['clue-focus','集中ページの探検家'],['all-clues','三つのヒントを発見'],['unlock-glitch','グリッチ解放者'],['unlock-neon','ネオン解放者'],['night-explorer','深夜の探検家']];
+ const list=$('achievementList');list.innerHTML='';const achievements=[['secret-discoverer','シークレット発見者'],['clue-home','ホームのヒント発見'],['home-explorer','ホームの探検家'],['clue-about','情報ページの探検家'],['clue-focus','集中ページの探検家'],['all-clues','三つのヒントを発見'],['unlock-glitch','グリッチ解放者'],['unlock-neon','ネオン解放者'],['night-explorer','深夜の探検家']];
  const earned=readSecretList(achievementStorageKey);achievements.push(['youtube-supporter','Aev0rnJPのサポーター']);achievements.forEach(([id,title])=>{const a=earned.find(x=>x.id===id),d=document.createElement('div');d.className='achievement-item'+(a?'':' locked');d.textContent=(a?'🏆 ':'🔒 ')+title+(a?' · '+a.date:' · 未解除');list.append(d)});
 }
 async function refreshAdminAchievementButton(){const area=$('adminAchievementUnlockArea');if(!area)return;area.hidden=true;try{const {data:{session}}=await supabaseClient.auth.getSession();if(!session)return;const {data,error}=await supabaseClient.rpc('aevtools_is_admin');area.hidden=!!error||data!==true}catch(e){area.hidden=true}}
