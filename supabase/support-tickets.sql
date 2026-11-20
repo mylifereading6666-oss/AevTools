@@ -438,3 +438,28 @@ $$;
 
 revoke all on function public.aevtools_admin_list_support_blacklist_users() from public;
 grant execute on function public.aevtools_admin_list_support_blacklist_users() to authenticated;
+
+-- Automatically resolve only the three exact achievement-unlock support requests.
+-- The ticket must belong to the caller and must be categorized as "other".
+create or replace function public.aevtools_resolve_achievement_support_ticket(
+  p_ticket_id uuid
+) returns boolean
+language plpgsql security definer
+set search_path = public
+as $$
+declare v_uid uuid := auth.uid();
+begin
+  if v_uid is null then raise exception 'login_required'; end if;
+  update public.aevtools_support_tickets
+  set status='resolved', updated_at=now()
+  where id=p_ticket_id
+    and user_id=v_uid
+    and category='other'
+    and message in ('グリッチ解放者','ネオン解放者','深夜の探検家');
+  if not found then raise exception 'achievement_ticket_not_found'; end if;
+  return true;
+end;
+$$;
+
+revoke all on function public.aevtools_resolve_achievement_support_ticket(uuid) from public;
+grant execute on function public.aevtools_resolve_achievement_support_ticket(uuid) to authenticated;
