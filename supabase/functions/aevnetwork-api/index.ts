@@ -85,12 +85,32 @@ async function hashTeamInvite(code: string) {
 }
 
 Deno.serve(async (req: Request) => {
+  let loggedAction = "unknown";
+  const origin = req.headers.get("Origin") ?? "";
+  let appKey = "unknown";
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "mylifereading6666-oss.github.io") {
+      // The API is shared; identify the site from its request path only when
+      // the browser sends a known, non-sensitive application hint.
+      appKey = req.headers.get("X-Aev-App") === "aevnetwork" ? "aevnetwork" : "aevtools";
+    }
+  } catch { /* Unknown or absent Origin: retain the safe default. */ }
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return respond(405, { error: "method_not_allowed" });
 
   try {
     const body = await req.json();
-    const action = String(body?.action ?? "");
+    const action = String(body?.action ?? "").replace(/[^a-zA-Z0-9_:-]/g, "").slice(0, 80) || "unknown";
+    loggedAction = action;
+    // Record metadata only. Never store request bodies, identity, credentials,
+    // tokens, user content, IP addresses, or email addresses.
+    await adminClient.from("aevtools_operation_logs").insert({
+      app_key: appKey,
+      event_type: "api_request",
+      action
+    });
 
     if (action === "service_get_status") {
       const { data, error } = await adminClient.from("aevtools_service_control")
