@@ -87,13 +87,13 @@ async function hashTeamInvite(code: string) {
 Deno.serve(async (req: Request) => {
   let loggedAction = "unknown";
   const origin = req.headers.get("Origin") ?? "";
+  const referer = req.headers.get("Referer") ?? "";
   let appKey = "unknown";
   try {
     const host = new URL(origin).hostname.toLowerCase();
+    const pagePath = new URL(referer).pathname.toLowerCase();
     if (host === "mylifereading6666-oss.github.io") {
-      // The API is shared; identify the site from its request path only when
-      // the browser sends a known, non-sensitive application hint.
-      appKey = req.headers.get("X-Aev-App") === "aevnetwork" ? "aevnetwork" : "aevtools";
+      appKey = pagePath.startsWith("/aevnetwork/") ? "aevnetwork" : "aevtools";
     }
   } catch { /* Unknown or absent Origin: retain the safe default. */ }
 
