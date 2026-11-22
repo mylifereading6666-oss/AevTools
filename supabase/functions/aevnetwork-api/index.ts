@@ -1209,6 +1209,13 @@ Deno.serve(async (req: Request) => {
 
     return respond(400, { error: "unknown_action" });
   } catch (_error) {
+    try {
+      await adminClient.from("aevtools_operation_logs").insert({
+        app_key: appKey,
+        event_type: "api_exception",
+        action: loggedAction
+      });
+    } catch { /* Logging must never break the API response. */ }
     return respond(400, { error: "invalid_request" });
   }
 });
